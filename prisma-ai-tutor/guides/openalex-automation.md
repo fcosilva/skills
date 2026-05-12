@@ -50,6 +50,7 @@ Transforma la necesidad de búsqueda en parámetros reproducibles:
 - autenticación por `api_key` cuando esté disponible.
 - carga de configuración desde archivo `.env` cuando esté disponible.
 - reintentos ante errores transitorios o límites temporales de la API.
+- filtro posterior por disponibilidad de `abstract` cuando el caso lo exige.
 
 ### 2. Source connector
 
@@ -118,6 +119,7 @@ Además, `search_log.md` y `summary.json` registran:
 
 - la ruta del archivo `metadata-columns.yaml` usado;
 - la lista de columnas de cribado activas en esa corrida.
+- alertas de volumen y muestreo cuando `max_results` o el total estimado requieren revisión metodológica.
 
 Después de aplicar decisiones de cribado, el flujo debe generar además:
 
@@ -463,6 +465,15 @@ Si `OpenAlex` reporta más de `2000` resultados y usas `--fetch-all` sin protecc
 
 - usar `--allow-large-fetch` para continuar;
 - o usar `--max-results N` para limitar la descarga.
+
+### Política metodológica simplificada para `max_results`
+
+- `max_results` es la muestra objetivo, no una selección metodológica final.
+- debe existir un umbral operativo configurable, recomendado en `500`.
+- si `max_results` supera ese umbral, el flujo debe advertir posible latencia.
+- si OpenAlex reporta más resultados que `max_results`, el usuario decide si autoriza trabajar con muestra acotada o si prefiere refinar la query.
+- si OpenAlex reporta más de `1000` resultados estimados, corresponde refinar la query antes del cribado inicial.
+- el orden `relevance_score:desc` de OpenAlex solo debe usarse como última instancia operativa si el refinamiento no reduce suficientemente el volumen.
 
 ## Actualización de la misma matriz de cribado
 

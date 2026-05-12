@@ -118,12 +118,18 @@ Obligatoria para pasar a la Fase 3 en el flujo formal.
 - Archivo de configuración de OpenAlex disponible: [[sí / no]]
 - Ruta del archivo de configuración: [[...]]
 - Validación del estudiante para usar esa configuración en la búsqueda: [[sí / no]]
+- Requerir abstract disponible en Fase 3: [[sí / no]]
+- Exigir artículos revisados por pares como criterio metodológico: [[sí / no]]
+- `max_results` objetivo: [[...]]
+- Umbral operativo de muestra: [[500 / otro]]
 
 Nota:
 
 - el script permite búsqueda sin configuración como capacidad técnica general;
 - sin embargo, en el flujo formal del skill la Fase 3 debe ejecutarse con archivo de configuración para reducir fricción con límites de uso y mejorar la continuidad del protocolo;
 - el archivo de configuración puede incluir `OPENALEX_API_KEY`, `OPENALEX_MAILTO` y otros ajustes básicos;
+- si se exige abstract, la configuración debe reflejar `OPENALEX_REQUIRE_ABSTRACT=true`;
+- si se exige revisión por pares, conviene usar `OPENALEX_TYPE=article`, pero la verificación fina no se deduce automáticamente de OpenAlex y debe confirmarse en el cribado humano;
 - la API key real no debe escribirse en la ficha; solo debe indicarse la disponibilidad y la ruta del archivo.
 
 ## Criterios preliminares

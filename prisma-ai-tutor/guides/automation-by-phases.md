@@ -108,6 +108,22 @@ Acción:
 - generar matriz inicial de cribado
 - generar bitácora
 
+Regla metodológica de volumen:
+
+- `max_results` es la muestra objetivo para exportación y cribado, no una selección metodológica final;
+- debe existir un umbral operativo configurable, recomendado en `500`;
+- si `max_results` supera el umbral, el agente debe advertir posible latencia y pedir confirmación o ajuste;
+- si OpenAlex reporta más resultados que `max_results`, el agente debe advertirlo;
+- si el usuario no aprueba trabajar con muestra acotada, corresponde refinar la query;
+- si OpenAlex reporta más de `1000` resultados estimados, corresponde refinar la query antes del cribado inicial;
+- el orden de relevancia de OpenAlex solo puede usarse como última instancia operativa si el refinamiento no logra bajar suficientemente el volumen.
+
+Regla metodológica de elegibilidad mínima para entrar al conjunto exportado:
+
+- el caso puede exigir `abstract` disponible como filtro obligatorio de Fase 3;
+- si el caso exige artículos revisados por pares, esto debe declararse metodológicamente y reflejarse al menos con `type=article`;
+- OpenAlex no expone una bandera exacta de peer review, así que la verificación fina sigue siendo parte del cribado humano.
+
 Salida:
 
 - `raw_results.json`
@@ -125,6 +141,7 @@ Pausa:
 Nota:
 
 - aunque el script puede operar sin configuración como capacidad técnica general, en el flujo formal del skill esta fase debe ejecutarse con archivo de configuración.
+- cuando el volumen exportado ya es una muestra acotada, Fase 4 trabaja sobre esa muestra y no sobre la totalidad estimada por OpenAlex.
 
 ### Fase 4. Cribado inicial
 

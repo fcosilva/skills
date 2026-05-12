@@ -31,6 +31,7 @@ DEFAULT_LARGE_FETCH_THRESHOLD = 2000
 DEFAULT_MAX_RETRIES = 4
 DEFAULT_RETRY_DELAY = 2.0
 DEFAULT_MAX_RETRY_WAIT = 60.0
+DEFAULT_MAX_RESULTS_THRESHOLD = 500
 COUNTRY_NAMES = {
     "AR": "Argentina",
     "AT": "Austria",
@@ -106,6 +107,8 @@ class SearchConfig:
     max_results: int
     fetch_all: bool
     allow_large_fetch: bool
+    require_abstract: bool
+    sampling_threshold: int
     quiet_progress: bool
     max_retries: int
     retry_delay: float
@@ -143,6 +146,7 @@ def parse_args() -> SearchConfig:
             "OPENALEX_TO_DATE, OPENALEX_LANGUAGE, OPENALEX_TYPE, "
             "OPENALEX_INCLUDE_TYPES, OPENALEX_EXCLUDE_TYPES, OPENALEX_IS_OA, "
             "OPENALEX_SOURCE_IN_DOAJ, OPENALEX_MAX_RESULTS, OPENALEX_PER_PAGE, "
+            "OPENALEX_REQUIRE_ABSTRACT, PRISMA_MAX_RESULTS_THRESHOLD, "
             "OPENALEX_MAX_RETRIES, OPENALEX_RETRY_DELAY, OPENALEX_MAX_RETRY_WAIT, "
             "OPENALEX_OUT_DIR, OPENALEX_QUERY_OUTPUT_NAME, OPENALEX_METADATA_CONFIG."
         ),
@@ -221,6 +225,14 @@ def parse_args() -> SearchConfig:
         help="Filter works whose primary source is listed in DOAJ.",
     )
     parser.add_argument(
+        "--require-abstract",
+        action="store_true",
+        help=(
+            "Keep only works with abstract available. Default: true unless "
+            "OPENALEX_REQUIRE_ABSTRACT=false in the config file."
+        ),
+    )
+    parser.add_argument(
         "--per-page",
         type=int,
         default=None,
@@ -234,6 +246,16 @@ def parse_args() -> SearchConfig:
         type=int,
         default=None,
         help="Maximum number of results to export. Default: 100.",
+    )
+    parser.add_argument(
+        "--sampling-threshold",
+        type=int,
+        default=None,
+        help=(
+            "Recommended upper bound for max_results before warning about latency. "
+            f"Default: {DEFAULT_MAX_RESULTS_THRESHOLD}. Can also be set as "
+            "PRISMA_MAX_RESULTS_THRESHOLD in the config file."
+        ),
     )
     parser.add_argument(
         "--fetch-all",
@@ -344,6 +366,19 @@ def parse_args() -> SearchConfig:
         args.source_in_doaj,
         env_config.get("OPENALEX_SOURCE_IN_DOAJ"),
     )
+    require_abstract = resolve_bool_flag(
+        args.require_abstract,
+        env_config.get("OPENALEX_REQUIRE_ABSTRACT"),
+        True,
+    )
+    sampling_threshold = max(
+        resolve_int(
+            args.sampling_threshold,
+            env_config.get("PRISMA_MAX_RESULTS_THRESHOLD"),
+            DEFAULT_MAX_RESULTS_THRESHOLD,
+        ),
+        1,
+    )
     out_dir = resolve_workspace_path(
         resolve_str(args.out_dir, env_config.get("OPENALEX_OUT_DIR"), "outputs/openalex-search"),
         config_file,
@@ -373,6 +408,8 @@ def parse_args() -> SearchConfig:
         max_results=max_results,
         fetch_all=args.fetch_all,
         allow_large_fetch=args.allow_large_fetch,
+        require_abstract=require_abstract,
+        sampling_threshold=sampling_threshold,
         quiet_progress=args.quiet_progress,
         max_retries=max_retries,
         retry_delay=retry_delay,
@@ -827,6 +864,13 @@ def normalize_work(work: dict[str, Any], position: int) -> dict[str, Any]:
     return normalized
 
 
+def filter_raw_results(raw_results: list[dict[str, Any]], config: SearchConfig) -> list[dict[str, Any]]:
+    filtered = raw_results
+    if config.require_abstract:
+        filtered = [work for work in filtered if work.get("abstract_inverted_index")]
+    return filtered
+
+
 def country_name(country_code: str) -> str:
     if not country_code:
         return ""
@@ -977,6 +1021,8 @@ def build_search_log_text(
     result_count: int,
     snapshot: dict[str, Any],
     metadata_columns: dict[str, list[str]],
+    warnings: list[str],
+    filtered_out_count: int,
 ) -> str:
     run_at = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
     filters = {
@@ -990,6 +1036,8 @@ def build_search_log_text(
         "exclude_types": config.exclude_types,
         "is_oa": config.is_oa,
         "source_in_doaj": config.source_in_doaj,
+        "require_abstract": config.require_abstract,
+        "sampling_threshold": config.sampling_threshold,
         "max_retries": config.max_retries,
         "retry_delay": config.retry_delay,
         "max_retry_wait": config.max_retry_wait,
@@ -1010,9 +1058,16 @@ def build_search_log_text(
         f"- Modo de exportacion: `{export_mode}`",
         f"- Resultados por pagina: `{config.per_page}`",
         f"- Permitir recuperacion grande: `{config.allow_large_fetch}`",
+        f"- Requerir abstract: `{config.require_abstract}`",
+        f"- Umbral operativo de muestra: `{config.sampling_threshold}`",
         f"- Filtros: `{json.dumps(filters, ensure_ascii=True)}`",
         f"- Resultados estimados por OpenAlex: `{meta.get('count', 'No reportado')}`",
         f"- Resultados exportados en esta ejecucion: `{result_count}`",
+        f"- Registros filtrados por reglas posteriores a la API: `{filtered_out_count}`",
+        "",
+        "## Alertas de muestreo y volumen",
+        "",
+        render_warning_lines(warnings),
         "",
         "## Resumen rapido de calidad del conjunto",
         "",
@@ -1035,6 +1090,8 @@ def build_search_log_text(
         "",
         "Esta bitacora documenta una recuperacion automatizada inicial. La inclusion final de estudios",
         "debe realizarse mediante cribado humano con criterios explicitos.",
+        "Si OpenAlex reporta mas resultados que `max_results`, el recorte se interpreta como una",
+        "muestra operativa priorizada por OpenAlex, no como una seleccion metodologica final.",
         "",
     ]
     return "\n".join(lines)
@@ -1047,8 +1104,18 @@ def write_search_log(
     result_count: int,
     snapshot: dict[str, Any],
     metadata_columns: dict[str, list[str]],
+    warnings: list[str],
+    filtered_out_count: int,
 ) -> str:
-    text = build_search_log_text(config, meta, result_count, snapshot, metadata_columns)
+    text = build_search_log_text(
+        config,
+        meta,
+        result_count,
+        snapshot,
+        metadata_columns,
+        warnings,
+        filtered_out_count,
+    )
     path.write_text(text, encoding="utf-8")
     return text
 
@@ -1057,6 +1124,38 @@ def render_count_lines(counts: dict[str, int]) -> str:
     if not counts:
         return "- No reportado"
     return "\n".join(f"- `{key}`: `{value}`" for key, value in counts.items())
+
+
+def render_warning_lines(warnings: list[str]) -> str:
+    if not warnings:
+        return "- Sin alertas."
+    return "\n".join(f"- {warning}" for warning in warnings)
+
+
+def compute_sampling_warnings(config: SearchConfig, meta: dict[str, Any]) -> list[str]:
+    warnings: list[str] = []
+    if config.max_results > config.sampling_threshold:
+        warnings.append(
+            "max_results supera el umbral operativo configurado y puede introducir "
+            "latencia o un subconjunto demasiado grande para cribado inicial."
+        )
+
+    count = meta.get("count")
+    if not isinstance(count, int):
+        return warnings
+
+    if count > 1000:
+        warnings.append(
+            "OpenAlex reporta más de 1000 resultados estimados. Corresponde refinar "
+            "la query antes del cribado inicial."
+        )
+    elif count > config.max_results:
+        warnings.append(
+            "OpenAlex reporta más resultados que max_results. Si el usuario no aprueba "
+            "trabajar con una muestra acotada, corresponde refinar la query."
+        )
+
+    return warnings
 
 
 def build_author_year(authors: str, year: Any) -> str:
@@ -1095,26 +1194,35 @@ def main() -> int:
         print(f"OpenAlex request failed: {exc}", file=sys.stderr)
         return 1
 
+    filtered_raw_results = filter_raw_results(raw_results, config)
+    filtered_out_count = len(raw_results) - len(filtered_raw_results)
     normalized = [
         normalize_work(work, position=index + 1)
-        for index, work in enumerate(raw_results)
+        for index, work in enumerate(filtered_raw_results)
     ]
     snapshot = compute_quality_snapshot(normalized)
+    sampling_warnings = compute_sampling_warnings(config, meta)
 
     summary = {
         "source": "OpenAlex",
         "query": config.query,
         "search_mode": config.search_mode,
         "fetch_all": config.fetch_all,
+        "max_results": config.max_results,
+        "sampling_threshold": config.sampling_threshold,
+        "require_abstract": config.require_abstract,
+        "fetched_results_before_post_filters": len(raw_results),
         "exported_results": len(normalized),
+        "filtered_out_after_fetch": filtered_out_count,
         "openalex_meta_count": meta.get("count"),
+        "sampling_warnings": sampling_warnings,
         "snapshot": snapshot,
         "metadata_config_file": str(config.metadata_config_file),
         "screening_columns": metadata_columns.get("screening_columns", []),
         "extraction_columns": metadata_columns.get("extraction_columns", []),
     }
 
-    write_json(config.out_dir / "raw_results.json", raw_results)
+    write_json(config.out_dir / "raw_results.json", filtered_raw_results)
     write_json(config.out_dir / "normalized_results.json", normalized)
     write_json(config.out_dir / "summary.json", summary)
     write_csv(config.out_dir / "normalized_results.csv", normalized)
@@ -1135,6 +1243,8 @@ def main() -> int:
         len(normalized),
         snapshot,
         metadata_columns,
+        sampling_warnings,
+        filtered_out_count,
     )
 
     print(search_log_text)

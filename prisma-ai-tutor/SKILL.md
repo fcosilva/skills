@@ -77,6 +77,15 @@ Senales practicas de que no toca Zotero:
 
 ## Regla para las iteraciones de cribado
 
+- antes de pasar de Fase 3 a Fase 4, el agente debe revisar `summary.json` y `search_log.md` para detectar si el volumen estimado supera `max_results` o el umbral operativo;
+- si `max_results` supera el umbral operativo configurado, el agente debe advertir posible latencia y pedir confirmación o ajuste;
+- si OpenAlex reporta más resultados que `max_results`, el agente no debe asumir que la muestra exportada representa todo el universo recuperado;
+- si el usuario no aprueba trabajar con una muestra acotada, corresponde refinar la query;
+- si OpenAlex reporta más de `1000` resultados estimados, corresponde refinar la query antes del cribado inicial;
+- el orden de relevancia de OpenAlex solo debe usarse como última instancia operativa cuando el refinamiento no logra bajar suficientemente el volumen.
+- cuando el caso lo exige, el agente debe exigir `abstract` disponible desde Fase 3.
+- si el caso exige artículos revisados por pares, el agente debe reflejarlo metodológicamente y con `type=article`, pero no debe afirmar que OpenAlex garantiza por sí solo la revisión por pares.
+
 - `initial`: separar ruido evidente de señal potencial con `título`, `resumen` y metadatos básicos.
 - `focused`: reevaluar solo los `Incluir` y `Dudoso` del `initial`, todavía principalmente con `título + resumen`, pero con mayor exigencia de alineación temática y metodológica.
 - entre `focused` y `final`: validar accesibilidad, recuperar los archivos fuente y preparar texto legible para revisión cuando sea posible.

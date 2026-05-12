@@ -135,6 +135,23 @@ Regla importante:
 - `final` solo se considera cerrado cuando el estudiante o docente confirma humanamente el corpus.
 - Zotero debe recibir solo el conjunto ya confirmado en el cribado final del estudiante.
 
+## Regla de busqueda y muestreo
+
+Para la transicion entre `Fase 3` y `Fase 4`, el skill sigue estas reglas:
+
+- `max_results` es la muestra objetivo para exportacion y cribado, no una seleccion metodologica final;
+- debe existir un umbral operativo configurable, recomendado en `500`, usando `PRISMA_MAX_RESULTS_THRESHOLD`;
+- si `max_results` supera ese umbral, el flujo debe advertir posible latencia y pedir confirmacion o ajuste;
+- si OpenAlex reporta mas resultados que `max_results`, el usuario decide si autoriza trabajar con muestra acotada o si prefiere refinar la query;
+- si OpenAlex reporta mas de `1000` resultados estimados, corresponde refinar la query antes del cribado inicial;
+- el orden de relevancia de OpenAlex solo debe usarse como ultima instancia operativa cuando el refinamiento no logra reducir suficientemente el volumen.
+
+Reglas complementarias:
+
+- cuando el caso lo exige, la Fase 3 debe trabajar solo con registros con `abstract` disponible, usando `OPENALEX_REQUIRE_ABSTRACT=true`;
+- si el caso exige articulos revisados por pares, esto debe declararse metodologicamente y reflejarse al menos con `OPENALEX_TYPE=article`;
+- OpenAlex no expone una bandera exacta de peer review, asi que la verificacion fina sigue siendo parte del cribado humano.
+
 Regla para la matriz de cribado:
 
 - entre `focused` y el cierre de `final` puede existir edicion humana supervisada de la matriz;
