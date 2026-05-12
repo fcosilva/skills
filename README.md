@@ -1,4 +1,4 @@
-# Skills del workspace
+# Skills
 
 Este directorio contiene los skills locales del repositorio.
 
