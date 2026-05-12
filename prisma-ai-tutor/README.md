@@ -1,0 +1,309 @@
+# PRISMA-AI Tutor
+
+**Versión del repositorio / primera publicación:** `Versión 1`
+
+`PRISMA-AI Tutor` es un agente/skill para acompañar mini revisiones sistemáticas de literatura en contextos formativos, especialmente en asignaturas iniciales de investigación en Desarrollo de Software.
+
+Su foco no es sustituir el juicio académico del estudiante o del docente, sino:
+
+- ayudar a delimitar temas y preguntas;
+- construir estrategias de búsqueda;
+- dejar trazabilidad por fases;
+- apoyar el cribado y la extracción;
+- mantener una separación clara entre automatización y decisión humana final.
+
+## Propósito
+
+Este agente está pensado para trabajos como:
+
+- revisiones exploratorias o mini revisiones sistemáticas;
+- temas de programación, IA en educación, ingeniería de software y áreas afines;
+- cursos donde importa más aprender el proceso metodológico que producir una revisión exhaustiva a escala profesional.
+
+## Alcance metodológico
+
+El agente usa una versión reducida y pedagógica de `PRISMA 2020`.
+
+Reglas básicas:
+
+- no inventa referencias, DOI ni resultados;
+- no afirma haber leído documentos no verificados;
+- toda inclusión o exclusión debe justificarse;
+- la lectura crítica final y la interpretación sustantiva siguen siendo responsabilidad humana.
+
+## Estructura
+
+```text
+skills/
+└── prisma-ai-tutor/
+    ├── README.md
+    ├── SKILL.md
+    ├── assets/
+    │   ├── extraction-matrix.md
+    │   ├── metadata-columns.yaml
+    │   ├── base.env.template
+    │   ├── case.env.template
+    │   ├── protocol-template.md
+    │   ├── quality-matrix.md
+    │   ├── screening-matrix.md
+    │   └── student-case-template.md
+    ├── guides/
+    │   ├── automation-by-phases.md
+    │   ├── database-selection-guide.md
+    │   └── openalex-automation.md
+    ├── scripts/
+    │   ├── openalex_search.py
+    │   ├── apply_screening_decisions.py
+    │   ├── validate_fulltext_access.py
+    │   └── ...
+    └── references/
+        ├── constraints.md
+        ├── methodology.md
+        ├── quality-checklist.md
+        └── workflow.md
+```
+
+Documentos de apoyo dentro del propio skill:
+
+- [guides/automation-by-phases.md](guides/automation-by-phases.md)
+- [guides/openalex-automation.md](guides/openalex-automation.md)
+- [guides/database-selection-guide.md](guides/database-selection-guide.md)
+- carpeta de casos reales: [cases](../../cases)
+- scripts de automatización: [scripts](scripts)
+
+## Configuracion recomendada
+
+Para evitar mezclar casos, el skill usa este modelo:
+
+- un archivo base reutilizable con valores compartidos, ubicado fuera del skill;
+- un archivo `case.env` dentro de cada carpeta de caso con rutas, query y artefactos de ese caso.
+
+Variable de herencia usada por los scripts:
+
+- `PRISMA_AI_TUTOR_BASE_CONFIG`
+- `PRISMA_AI_TUTOR_WORKSPACE_ROOT`
+
+Archivos esperados:
+
+- `config/prisma-ai-tutor/base.env` o `~/.codex/prisma-ai-tutor/base.env`
+- `cases/<slug-del-caso>/case.env`
+
+Recomendación de uso:
+
+- si normalmente trabajarás varios casos dentro del mismo repositorio, conviene `config/prisma-ai-tutor/base.env` en el workspace;
+- si quieres reutilizar la misma configuración entre múltiples workspaces, conviene `~/.codex/prisma-ai-tutor/base.env`.
+
+Regla de resolución de rutas:
+
+- las rutas internas del skill se resuelven desde el propio skill;
+- las rutas operativas del caso, como `cases/` y `outputs/`, se resuelven contra `PRISMA_AI_TUTOR_WORKSPACE_ROOT` si está definido;
+- si `PRISMA_AI_TUTOR_WORKSPACE_ROOT` no está definido, se usa el directorio actual desde el que se ejecuta el comando.
+
+## Flujo recomendado
+
+El flujo formal del agente se organiza por fases:
+
+1. delimitación del tema;
+2. construcción y validación de `query.txt`;
+3. búsqueda automatizada;
+4. cribado `initial`;
+5. cribado `focused`;
+6. validación de accesibilidad y recuperación local de full text;
+7. cribado `final`;
+8. integración bibliográfica en Zotero;
+9. extracción de evidencia;
+10. evaluación de calidad;
+11. síntesis narrativa y auditoría final.
+
+Regla de ejecución:
+
+- estas fases son secuenciales;
+- no deben ejecutarse en paralelo sobre el mismo caso;
+- cada fase debe cerrar sus artefactos antes de pasar a la siguiente.
+
+Regla para Zotero:
+
+- Zotero entra solo despues del `final` confirmado por el estudiante;
+- no entra durante `initial`, `focused` ni `final` pendiente;
+- su disparador correcto es `corpus final confirmado + configuracion minima disponible`.
+
+Regla importante:
+
+- `initial` y `focused` trabajan principalmente con `título + resumen + metadatos`;
+- `final` idealmente ya incorpora texto preparado para revision desde `pdf_fulltext` o `html_fulltext`;
+- si no existe full text, el agente debe marcar explícitamente que la base fue `Resumen y metadatos`.
+- `final` solo se considera cerrado cuando el estudiante o docente confirma humanamente el corpus.
+- Zotero debe recibir solo el conjunto ya confirmado en el cribado final del estudiante.
+
+Regla para la matriz de cribado:
+
+- entre `focused` y el cierre de `final` puede existir edicion humana supervisada de la matriz;
+- las columnas de decision pueden ajustarse manualmente;
+- `Codigo` no debe cambiar, porque actua como clave de trazabilidad entre cribado, scripts y Zotero.
+
+## Integración con Zotero
+
+Cuando el estudiante ya confirmó manualmente el cribado final, el siguiente paso recomendado es integrar el corpus seleccionado en Zotero.
+
+Reglas acordadas para esta integración:
+
+- deben entrar todos los estudios del cribado final, no solo los que tienen PDF accesible;
+- si existe PDF local, el flujo actual lo copia primero a la carpeta configurada de Zotero;
+- no es necesario adjuntar el `.txt` extraído;
+- el ítem debe conservar también la URL de origen;
+- si el ítem ya existe en Zotero, se debe complementar la metadata faltante;
+- si el ítem ya existe pero está en otra colección, también debe añadirse a la colección destino indicada.
+- además, el flujo puede crear varias notas hijas por ítem:
+  - una nota mínima de cribado final en Fase 8;
+  - una nota nueva de extracción en Fase 9;
+  - una nota nueva de calidad en Fase 10.
+
+Configuración esperada para esta futura integración:
+
+- la configuración operativa debe vivir en el archivo `.env` del proyecto;
+- el script de integración con Zotero leerá desde ahí, como mínimo:
+  - nombre de la librería;
+  - nombre de la colección;
+  - ruta de la carpeta local fuente con PDFs;
+  - ruta de la carpeta que Zotero usa para enlazar o almacenar PDFs;
+  - ruta de los artefactos de cribado final que se usarán como fuente de verdad.
+
+Parámetros ya reservados en la plantilla `.env`:
+
+- `ZOTERO_LIBRARY`
+- `ZOTERO_MCP_URL`
+- `ZOTERO_COLLECTION`
+- `ZOTERO_ATTACHMENTS_DIR`
+- `ZOTERO_LIBRARY_FILES_DIR`
+- `ZOTERO_SCREENING_DECISIONS`
+- `ZOTERO_SCREENING_MATRIX`
+
+Scripts ya disponibles para esta integración:
+
+- [scripts/prepare_zotero_import.py](scripts/prepare_zotero_import.py)
+- [scripts/sync_zotero_mcp.py](scripts/sync_zotero_mcp.py)
+- [scripts/write_zotero_notes.py](scripts/write_zotero_notes.py)
+- [scripts/zotero_mcp_client.py](scripts/zotero_mcp_client.py)
+
+Artefactos esperados de esta fase:
+
+- `zotero_import_manifest.json`
+- `zotero_import_manifest.csv`
+- `zotero_attachment_copy_log.csv`
+- `zotero_import_summary.json`
+- `zotero_sync_summary.json`
+- `zotero_sync_actions.csv`
+- `zotero_notes_summary.json`
+- `zotero_notes_actions.csv`
+
+Limitación actual:
+
+- el `zotero-mcp` disponible permite crear colecciones, buscar ítems, crear ítems, actualizar metadata y añadir ítems a colecciones;
+- también permite crear notas hijas estructuradas por ítem;
+- por ahora no expone una herramienta directa para importar un PDF local como attachment nuevo;
+- por eso el flujo actual puede copiar PDFs a la carpeta configurada de Zotero y sincronizar metadata, pero el enlace automático del PDF como attachment depende de una capacidad futura del MCP o de un paso auxiliar.
+
+## Automatización OpenAlex
+
+La automatización abierta actual del agente se apoya en `OpenAlex`.
+
+Scripts principales:
+
+- [scripts/openalex_search.py](scripts/openalex_search.py)
+- [scripts/apply_screening_decisions.py](scripts/apply_screening_decisions.py)
+- [scripts/validate_fulltext_access.py](scripts/validate_fulltext_access.py)
+- [scripts/download_fulltext.py](scripts/download_fulltext.py)
+- [scripts/prepare_fulltext_review_text.py](scripts/prepare_fulltext_review_text.py)
+
+Artefactos típicos por corrida:
+
+- `query.txt`
+- `normalized_results.json`
+- `normalized_results.csv`
+- `screening_matrix.md`
+- `screening_matrix.csv`
+- `search_log.md`
+- `screening_decisions_*.csv`
+- `screening_summary_*.md`
+- `fulltext_download_log.csv`
+- `fulltext_recovery_summary.md`
+- `fulltext_review_text_log.csv`
+- `fulltext_review_text_summary.md`
+- `extraction_matrix.md`
+
+## Metadata generada
+
+La normalización actual de OpenAlex incluye, entre otros:
+
+- `DOI`
+- `Acceso abierto`
+- `Texto completo accesible`
+- `Primera afiliación`
+- `País`
+- `URL DOI`
+- `URL de acceso`
+- `URL OpenAlex`
+
+## Configuracion de columnas en v2
+
+Desde la v2, las columnas operativas de metadata para matrices se configuran en:
+
+- [metadata-columns.yaml](assets/metadata-columns.yaml)
+
+Esto permite ajustar columnas de cribado y extracción sin editar el código del conector cada vez que se agregue metadata nueva.
+
+Regla práctica:
+
+- `openalex_search.py` usa ese `YAML` para la matriz de cribado generada en cada corrida;
+- las plantillas de `screening-matrix.md` y `extraction-matrix.md` se regeneran desde el mismo archivo;
+- los artefactos `json/csv` normalizados siguen conservando el conjunto completo de metadata disponible, aunque la matriz muestre solo el subconjunto configurado.
+
+### Regla para `Primera afiliación` y `País`
+
+Estos dos campos se derivan de la **primera afiliación institucional disponible en OpenAlex**.
+
+Eso significa que:
+
+- no necesariamente representan a todos los autores;
+- no sustituyen una lectura bibliométrica más fina;
+- funcionan como metadata operativa útil para cribado, extracción y análisis descriptivo básico.
+
+## Límite entre agente y estudiante
+
+Este agente puede:
+
+- proponer delimitaciones;
+- sugerir criterios;
+- automatizar partes de la búsqueda;
+- apoyar el cribado;
+- preparar matrices;
+- resumir hallazgos con prudencia.
+
+Este agente no debe:
+
+- cerrar la interpretación académica por sí solo;
+- presentar como “leído” un documento no recuperado;
+- inventar resultados;
+- reemplazar la revisión humana final.
+
+## Estado esperado de una primera versión operativa
+
+Una primera versión madura del flujo debería permitir:
+
+- arrancar desde una ficha de caso;
+- ejecutar una búsqueda abierta trazable;
+- iterar el cribado por niveles;
+- recuperar localmente parte del corpus;
+- separar estudios con full text claro de estudios solo accesibles por resumen;
+- pasar a extracción con un subconjunto defendible.
+
+## Próximo uso recomendado
+
+Para abrir un caso nuevo:
+
+1. crear una carpeta del caso, por ejemplo `cases/<slug-del-caso>/`;
+2. copiar [student-case-template.md](assets/student-case-template.md) como `cases/<slug-del-caso>/case.md`;
+3. crear `cases/<slug-del-caso>/case.env` a partir de [case.env.template](assets/case.env.template);
+4. completar tema, pregunta inicial y configuración del caso;
+5. avanzar por fases con autorización;
+6. conservar una carpeta `outputs/<corrida>` por cada iteración importante.

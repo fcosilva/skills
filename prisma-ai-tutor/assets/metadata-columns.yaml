@@ -1,0 +1,40 @@
+# Columnas configurables de metadata y matrices para PRISMA-AI Tutor.
+# La matriz de cribado agrega ademas, de forma fija, las columnas de decision.
+
+screening_columns:
+  - code
+  - title
+  - author_year
+  - first_affiliation
+  - country
+  - language
+  - source
+  - document_type
+  - doi
+  - open_access
+  - fulltext_accessible
+  - url_doi
+  - url_access
+  - url_openalex
+  - abstract_available
+
+extraction_columns:
+  - code
+  - author_year
+  - country
+  - language
+  - first_affiliation
+  - title
+  - objective
+  - method
+  - context
+  - sample_corpus
+  - tool
+  - main_variable
+  - effect_type
+  - autonomy_relation
+  - dependency_relation
+  - performance_relation
+  - findings
+  - limitations
+  - relevance
