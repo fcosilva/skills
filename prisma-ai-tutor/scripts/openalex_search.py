@@ -993,6 +993,8 @@ def screening_value(key: str, row: dict[str, Any]) -> str:
         return row.get("first_affiliation", "")
     if key == "country":
         return row.get("country", "")
+    if key == "language":
+        return row.get("language", "")
     if key == "source":
         return row.get("source", "")
     if key == "document_type":
