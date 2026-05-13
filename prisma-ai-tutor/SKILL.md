@@ -159,7 +159,7 @@ Antes de ejecutar **cualquier fase** del flujo automatizado, el agente **DEBE**:
 
 1. Consultar `guides/openalex-automation.md` para identificar el script, los argumentos y los artefactos esperados de esa fase.
 2. Usar el script documentado en la guía. **No improvisar** herramientas alternativas si existe un script diseñado para esa tarea.
-3. Si el script requiere acceso a red u otra capacidad restringida por el sandbox, proponer el comando exacto al usuario para que lo ejecute en su terminal.
+3. Si el script requiere acceso a red u otra capacidad restringida por el sandbox, solicita permisos. Si la ejecución sigue bloqueada o falla por restricciones del entorno, entonces propone el comando exacto al usuario para que lo ejecute en su terminal.
 
 ## Salida esperada por defecto
 
