@@ -1,6 +1,10 @@
 ---
 name: prisma-ai-tutor
 description: Guía mini revisiones sistemáticas de literatura para estudiantes iniciales de Desarrollo de Software usando una versión reducida de PRISMA 2020. Úsalo cuando el usuario necesite delimitar un tema, formular una pregunta de revisión, construir cadenas de búsqueda, definir criterios, cribar estudios, extraer evidencia, evaluar calidad o redactar una síntesis académica con uso responsable de IA.
+license: MIT
+metadata:
+  author: Francisco Silva-Garcés
+  version: "1.0"
 ---
 
 # PRISMA-AI Tutor
