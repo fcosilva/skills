@@ -10,6 +10,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from openalex_search import WORKSPACE_ROOT_KEY, resolve_workspace_path
+from run_outputs import refresh_run_outputs
 
 
 FULLTEXT_KINDS = {"pdf_fulltext", "html_fulltext"}
@@ -188,6 +189,7 @@ def main() -> int:
 
     write_csv(log_path, rows)
     write_summary(summary_path, output_dir, rows)
+    refresh_run_outputs(output_dir.parent.parent)
     print(
         f"Prepared {sum(1 for row in rows if row['status'] == 'prepared')} review text files in: {output_dir}"
     )

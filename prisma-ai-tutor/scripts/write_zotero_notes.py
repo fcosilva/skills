@@ -11,10 +11,16 @@ from pathlib import Path
 from typing import Any
 
 from openalex_search import load_env_config, resolve_workspace_path
+from run_outputs import refresh_run_outputs
 from zotero_mcp_client import ZoteroMCPClient
 
 
 DEFAULT_MCP_URL = "http://127.0.0.1:23120/mcp"
+SCREENING_DECISION_HEADER = "Decision de cribado"
+SCREENING_REASON_HEADER = "Motivo de cribado"
+SCREENING_CRITERION_HEADER = "Criterio de cribado"
+FINAL_BASIS_HEADER = "Base de seleccion final"
+FINAL_NOTE_HEADER = "Observacion de seleccion final"
 
 
 @dataclass
@@ -62,17 +68,17 @@ def parse_args() -> NotesConfig:
     parser.add_argument(
         "--extraction-matrix",
         default=None,
-        help="Path to extraction_matrix.md. Default: sibling of screening matrix.",
+        help="Path to extraction_matrix.md. Default: outputs/<run>/extraction/extraction_matrix.md.",
     )
     parser.add_argument(
         "--sync-actions",
         default=None,
-        help="Path to zotero_sync_actions.csv. Default: sibling of screening matrix.",
+        help="Path to zotero_sync_actions.csv. Default: outputs/<run>/zotero/zotero_sync_actions.csv.",
     )
     parser.add_argument(
         "--out-dir",
         default=None,
-        help="Directory for note generation logs. Default: sibling of screening matrix.",
+        help="Directory for note generation logs. Default: outputs/<run>/zotero.",
     )
     parser.add_argument("--dry-run", action="store_true", help="Preview note actions only.")
 
@@ -94,21 +100,21 @@ def parse_args() -> NotesConfig:
     if not str(screening_decisions):
         raise ValueError("Missing ZOTERO_SCREENING_DECISIONS.")
 
-    base_dir = screening_matrix.parent
+    run_dir = screening_matrix.parent.parent
     extraction_matrix = (
         resolve_workspace_path(args.extraction_matrix, config_file, env_config)
         if args.extraction_matrix
-        else base_dir / "extraction_matrix.md"
+        else run_dir / "extraction" / "extraction_matrix.md"
     )
     sync_actions = (
         resolve_workspace_path(args.sync_actions, config_file, env_config)
         if args.sync_actions
-        else base_dir / "zotero_sync_actions.csv"
+        else run_dir / "zotero" / "zotero_sync_actions.csv"
     )
     out_dir = (
         resolve_workspace_path(args.out_dir, config_file, env_config)
         if args.out_dir
-        else base_dir
+        else run_dir / "zotero"
     )
     mcp_url = args.mcp_url or env_config.get("ZOTERO_MCP_URL", DEFAULT_MCP_URL).strip() or DEFAULT_MCP_URL
 
@@ -154,16 +160,16 @@ def build_screening_note_content(
     action_row: dict[str, str],
 ) -> str:
     lines = [
-        "# PRISMA-AI | Cribado final",
+        "# PRISMA-AI | Seleccion final",
         "",
-        "## Cribado final",
+        "## Seleccion final / evaluacion de elegibilidad",
         "",
         f"- Codigo: `{matrix_row.get('Codigo', '')}`",
-        f"- Decision: `{matrix_row.get('Decision', '')}`",
-        f"- Motivo de decision: {matrix_row.get('Motivo de decision', '')}",
-        f"- Criterio aplicado: {matrix_row.get('Criterio aplicado', '')}",
-        f"- Base de decision final: `{matrix_row.get('Base de decision final', '')}`",
-        f"- Observacion final: {matrix_row.get('Observacion final', '')}",
+        f"- Decision de cribado: `{matrix_row.get(SCREENING_DECISION_HEADER, '')}`",
+        f"- Motivo de cribado: {matrix_row.get(SCREENING_REASON_HEADER, '')}",
+        f"- Criterio de cribado: {matrix_row.get(SCREENING_CRITERION_HEADER, '')}",
+        f"- Base de seleccion final: `{matrix_row.get(FINAL_BASIS_HEADER, '')}`",
+        f"- Observacion de seleccion final: {matrix_row.get(FINAL_NOTE_HEADER, '')}",
         f"- Revisar texto completo: `{matrix_row.get('Revisar texto completo', '')}`",
         f"- Texto completo accesible: `{matrix_row.get('Texto completo accesible', '')}`",
         "",
@@ -202,8 +208,8 @@ def build_extraction_note_content(
         "## Identificacion",
         "",
         f"- Codigo: `{matrix_row.get('Codigo', '')}`",
-        f"- Decision final: `{matrix_row.get('Decision', '')}`",
-        f"- Base de decision final: `{matrix_row.get('Base de decision final', '')}`",
+        f"- Decision de cribado: `{matrix_row.get(SCREENING_DECISION_HEADER, '')}`",
+        f"- Base de seleccion final: `{matrix_row.get(FINAL_BASIS_HEADER, '')}`",
         "",
         "## Extraccion de evidencia",
         "",
@@ -245,7 +251,7 @@ def build_quality_note_content(
         "## Identificacion",
         "",
         f"- Codigo: `{matrix_row.get('Codigo', '')}`",
-        f"- Decision final: `{matrix_row.get('Decision', '')}`",
+        f"- Decision de cribado: `{matrix_row.get(SCREENING_DECISION_HEADER, '')}`",
         f"- Texto completo accesible: `{matrix_row.get('Texto completo accesible', '')}`",
         "",
         "## Evaluacion de calidad",
@@ -281,7 +287,7 @@ def build_note_content(
 
 def note_title_for_phase(phase: str) -> str:
     return {
-        "screening": "PRISMA-AI | Cribado final",
+        "screening": "PRISMA-AI | Seleccion final",
         "extraction": "PRISMA-AI | Extraccion",
         "quality": "PRISMA-AI | Calidad",
     }[phase]
@@ -407,6 +413,7 @@ def main() -> int:
     actions_path = config.out_dir / "zotero_notes_actions.csv"
     write_json(summary_path, result)
     write_csv(actions_path, result["actions"])
+    refresh_run_outputs(config.out_dir.parent)
     print(
         f"Zotero notes {'preview' if config.dry_run else 'completed'} for "
         f"{result['notes_processed']} items."

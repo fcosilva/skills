@@ -106,14 +106,15 @@ Scripts relacionados:
 
 El script exporta:
 
-- `query.txt`
-- `raw_results.json`
-- `normalized_results.json`
-- `normalized_results.csv`
-- `screening_matrix.md`
-- `screening_matrix.csv`
-- `search_log.md`
-- `summary.json`
+- `search/query.txt`
+- `search/query_history.md` cuando la estrategia del caso haya sido refinada entre corridas
+- `search/raw_results.json`
+- `search/normalized_results.json`
+- `search/normalized_results.csv`
+- `search/search_log.md`
+- `search/summary.json`
+- `screening/screening_matrix.md`
+- `screening/screening_matrix.csv`
 
 Además, `search_log.md` y `summary.json` registran:
 
@@ -121,24 +122,34 @@ Además, `search_log.md` y `summary.json` registran:
 - la lista de columnas de cribado activas en esa corrida.
 - alertas de volumen y muestreo cuando `max_results` o el total estimado requieren revisión metodológica.
 
+Regla de trazabilidad del query:
+
+- `query.txt` conserva la version vigente ejecutada en la corrida actual;
+- cuando el caso refine la estrategia de busqueda de forma sustantiva, corresponde crear o actualizar `query_history.md` en el mismo directorio de salida;
+- `query_history.md` debe conservar al menos:
+  - la version inicial;
+  - cada version refinada;
+  - el motivo del refinamiento;
+  - el cambio operativo observado, por ejemplo en volumen estimado o pertinencia del conjunto.
+
 Después de aplicar decisiones de cribado, el flujo debe generar además:
 
-- `screening_decisions_<fase>.csv`
-- `screening_summary_<fase>.md`
+- `screening/screening_decisions_<fase>.csv`
+- `screening/screening_summary_<fase>.md`
 
 Ejemplos típicos:
 
-- `screening_decisions_initial.csv`
-- `screening_summary_initial.md`
-- `screening_decisions_focused.csv`
-- `screening_summary_focused.md`
-- `screening_decisions_final.csv`
-- `screening_summary_final.md`
+- `screening/screening_decisions_initial.csv`
+- `screening/screening_summary_initial.md`
+- `screening/screening_decisions_focused.csv`
+- `screening/screening_summary_focused.md`
+- `screening/screening_decisions_final.csv`
+- `screening/screening_summary_final.md`
 
 La actualización de decisiones mantiene sincronizados:
 
-- `screening_matrix.md`
-- `screening_matrix.csv`
+- `screening/screening_matrix.md`
+- `screening/screening_matrix.csv`
 
 La matriz de cribado generada desde OpenAlex incluye ahora, desde la primera corrida:
 
@@ -181,8 +192,8 @@ Ejemplo:
 
 ```bash
 python3 skills/prisma-ai-tutor/scripts/validate_fulltext_access.py \
-  --matrix outputs/<corrida>/screening_matrix.md \
-  --decisions outputs/<corrida>/screening_decisions_focused.csv
+  --matrix outputs/<corrida>/screening/screening_matrix.md \
+  --decisions outputs/<corrida>/screening/screening_decisions_focused.csv
 ```
 
 ## Recuperación local de texto completo
@@ -214,11 +225,11 @@ Ejemplo:
 
 ```bash
 python3 skills/prisma-ai-tutor/scripts/download_fulltext.py \
-  --matrix outputs/<corrida>/screening_matrix.md \
-  --decisions outputs/<corrida>/screening_decisions_focused.csv \
+  --matrix outputs/<corrida>/screening/screening_matrix.md \
+  --decisions outputs/<corrida>/screening/screening_decisions_focused.csv \
   --output-dir cases/ia-generativa-programacion/fulltext \
-  --log outputs/<corrida>/fulltext_download_log.csv \
-  --summary outputs/<corrida>/fulltext_recovery_summary.md \
+  --log outputs/<corrida>/fulltext/fulltext_download_log.csv \
+  --summary outputs/<corrida>/fulltext/fulltext_recovery_summary.md \
   --config-file cases/ia-generativa-programacion/case.env
 ```
 
@@ -226,11 +237,11 @@ Ejemplo con cookies exportadas del navegador:
 
 ```bash
 python3 skills/prisma-ai-tutor/scripts/download_fulltext.py \
-  --matrix outputs/<corrida>/screening_matrix.md \
-  --decisions outputs/<corrida>/screening_decisions_focused.csv \
+  --matrix outputs/<corrida>/screening/screening_matrix.md \
+  --decisions outputs/<corrida>/screening/screening_decisions_focused.csv \
   --output-dir cases/ia-generativa-programacion/fulltext \
-  --log outputs/<corrida>/fulltext_download_log.csv \
-  --summary outputs/<corrida>/fulltext_recovery_summary.md \
+  --log outputs/<corrida>/fulltext/fulltext_download_log.csv \
+  --summary outputs/<corrida>/fulltext/fulltext_recovery_summary.md \
   --config-file cases/ia-generativa-programacion/case.env \
   --cookies-file ruta/a/browser-cookies.txt
 ```
@@ -238,8 +249,8 @@ python3 skills/prisma-ai-tutor/scripts/download_fulltext.py \
 Artefactos esperados:
 
 - carpeta local de documentos fuente, por ejemplo `cases/<slug>/fulltext/`
-- `fulltext_download_log.csv`
-- `fulltext_recovery_summary.md`
+- `outputs/<corrida>/fulltext/fulltext_download_log.csv`
+- `outputs/<corrida>/fulltext/fulltext_recovery_summary.md`
 
 Clasificación operativa recomendada:
 
@@ -266,15 +277,15 @@ Ejemplo:
 ```bash
 python3 skills/prisma-ai-tutor/scripts/prepare_fulltext_review_text.py \
   --input-dir cases/ia-generativa-programacion/fulltext \
-  --output-dir outputs/<corrida>/fulltext_review_text \
-  --download-log outputs/<corrida>/fulltext_download_log.csv
+  --output-dir outputs/<corrida>/fulltext/review_text \
+  --download-log outputs/<corrida>/fulltext/fulltext_download_log.csv
 ```
 
 Artefactos esperados:
 
-- `outputs/<corrida>/fulltext_review_text/`
-- `fulltext_review_text_log.csv`
-- `fulltext_review_text_summary.md`
+- `outputs/<corrida>/fulltext/review_text/`
+- `outputs/<corrida>/fulltext/fulltext_review_text_log.csv`
+- `outputs/<corrida>/fulltext/fulltext_review_text_summary.md`
 
 Recomendación metodológica:
 
@@ -292,7 +303,7 @@ Además genera un resumen rápido de calidad del conjunto con datos como:
 - distribución de idiomas;
 - distribución de tipos documentales.
 
-La query efectiva queda persistida en `query.txt` dentro del directorio de salida, para que pueda revisarse, corregirse y reutilizarse en la siguiente fase.
+La query efectiva queda persistida en `search/query.txt` dentro del directorio de salida, para que pueda revisarse, corregirse y reutilizarse en la siguiente fase.
 
 Nota de uso:
 
@@ -377,11 +388,11 @@ python3 skills/prisma-ai-tutor/scripts/openalex_search.py \
 ```env
 PRISMA_AI_TUTOR_BASE_CONFIG=../../config/prisma-ai-tutor/base.env
 PRISMA_AI_TUTOR_WORKSPACE_ROOT=../..
-OPENALEX_QUERY_FILE=outputs/mi-corrida/query.txt
+OPENALEX_QUERY_FILE=outputs/mi-corrida/search/query.txt
 OPENALEX_OUT_DIR=outputs/mi-corrida
 ZOTERO_ATTACHMENTS_DIR=cases/mi-caso/fulltext
-ZOTERO_SCREENING_DECISIONS=outputs/mi-corrida/screening_decisions_final.csv
-ZOTERO_SCREENING_MATRIX=outputs/mi-corrida/screening_matrix.csv
+ZOTERO_SCREENING_DECISIONS=outputs/mi-corrida/screening/screening_decisions_final.csv
+ZOTERO_SCREENING_MATRIX=outputs/mi-corrida/screening/screening_matrix.csv
 ```
 
 En el flujo formal del skill, esta es la opción preferida porque permite:
@@ -477,19 +488,19 @@ Si `OpenAlex` reporta más de `2000` resultados y usas `--fetch-all` sin protecc
 
 ## Actualización de la misma matriz de cribado
 
-La intención del flujo es que el cribado inicial actualice la misma `screening_matrix.md` generada por la búsqueda.
+La intención del flujo es que el cribado inicial actualice la misma `screening/screening_matrix.md` generada por la búsqueda.
 
 Aplicar decisiones a la matriz:
 
 ```bash
 python3 skills/prisma-ai-tutor/scripts/apply_screening_decisions.py \
-  --matrix outputs/<corrida>/screening_matrix.md \
-  --decisions outputs/<corrida>/screening_decisions_initial.csv
+  --matrix outputs/<corrida>/screening/screening_matrix.md \
+  --decisions outputs/<corrida>/screening/screening_decisions_initial.csv
 ```
 
 Comportamiento actual:
 
-- actualiza `screening_matrix.md`
+- actualiza `screening/screening_matrix.md`
 - genera automaticamente un resumen en la misma carpeta del CSV de decisiones
 - si el CSV se llama `screening_decisions_initial.csv`, `screening_decisions_focused.csv` o `screening_decisions_final.csv`, el resumen se nombra automaticamente por fase
 - `--summary` sigue disponible cuando se necesita una ruta personalizada

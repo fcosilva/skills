@@ -25,11 +25,11 @@ Usa este skill cuando el usuario necesite apoyo metodológico para una mini revi
 ## Flujo breve
 
 1. Diagnostica si el tema es viable y ayúdale a delimitarlo.
-2. Formula o mejora la pregunta de revisión.
+2. Formula o mejora la pregunta de revisión con base al modelo PICO (Population/Problem, Intervention/interest, Comparison, Outcome)
 3. Propón palabras clave, cadenas de búsqueda y criterios.
-4. Guía el cribado (selección de estudios) por niveles: `initial`, `focused` y `final`.
+4. Guía el cribado por niveles `initial` y `focused`, y luego la selección final o evaluación de elegibilidad.
 5. Usa `título + resumen` sobre todo en `initial` y `focused`; después valida accesibilidad, recupera los archivos fuente y prepara texto legible para revisión del subconjunto priorizado.
-6. Cierra `final` solo cuando el estudiante o docente confirme humanamente el corpus resultante.
+6. Cierra la selección final solo cuando el estudiante o docente confirme humanamente el corpus resultante.
 7. Integra el corpus confirmado en Zotero cuando ya corresponda.
 8. Extrae evidencia verificable desde el texto.
 9. Evalúa calidad metodológica básica.
@@ -79,8 +79,14 @@ Senales practicas de que no toca Zotero:
 - la configuracion de Zotero sigue incompleta;
 - el usuario todavia no ha validado el corpus final.
 
-## Regla para las iteraciones de cribado
+## Regla para cribado y selección
 
+- toda refinacion sustantiva de la cadena de busqueda debe quedar trazada en un artefacto como `query_history.md`;
+- ese historial debe registrar al menos:
+  - version de la query;
+  - motivo del cambio;
+  - ajustes metodologicos relevantes;
+  - efecto operativo observado en volumen o pertinencia;
 - antes de pasar de Fase 3 a Fase 4, el agente debe revisar `summary.json` y `search_log.md` para detectar si el volumen estimado supera `max_results` o el umbral operativo;
 - si `max_results` supera el umbral operativo configurado, el agente debe advertir posible latencia y pedir confirmación o ajuste;
 - si OpenAlex reporta más resultados que `max_results`, el agente no debe asumir que la muestra exportada representa todo el universo recuperado;
@@ -90,23 +96,33 @@ Senales practicas de que no toca Zotero:
 - cuando el caso lo exige, el agente debe exigir `abstract` disponible desde Fase 3.
 - si el caso exige artículos revisados por pares, el agente debe reflejarlo metodológicamente y con `type=article`, pero no debe afirmar que OpenAlex garantiza por sí solo la revisión por pares.
 
+Regla de cierre de refinamiento:
+
+- si la query cambia de forma sustantiva entre corridas, el agente debe actualizar `query.txt` con la version vigente y mantener o crear `query_history.md` para conservar las versiones anteriores y su justificacion;
+- `search_log.md` documenta la corrida vigente, pero no reemplaza el historial de refinamientos.
+
 - `initial`: separar ruido evidente de señal potencial con `título`, `resumen` y metadatos básicos.
 - `focused`: reevaluar solo los `Incluir` y `Dudoso` del `initial`, todavía principalmente con `título + resumen`, pero con mayor exigencia de alineación temática y metodológica.
-- entre `focused` y `final`: validar accesibilidad, recuperar los archivos fuente y preparar texto legible para revisión cuando sea posible.
-- `final`: cerrar la selección del corpus antes de extracción, idealmente verificando `texto completo` cuando sea posible.
+- entre `focused` y la selección final: validar accesibilidad, recuperar los archivos fuente y preparar texto legible para revisión cuando sea posible.
+- selección final / evaluación de elegibilidad: cerrar la selección del corpus antes de extracción, idealmente verificando `texto completo` cuando sea posible.
+
+Regla de redacción de artefactos:
+
+- cuando el agente documente `initial` en matrices, CSV o resúmenes, debe describir explícitamente la fase como basada en `título + resumen + metadatos básicos`;
+- no debe redactar `initial` como si dependiera solo de `título + metadatos`, salvo que el usuario lo haya limitado de forma extraordinaria y quede justificado.
 
 ## Regla para la edicion humana de la matriz
 
-Entre `focused` y el cierre de `final` puede existir una revision humana supervisada de la matriz principal. Esa edicion manual es parte normal del flujo y no debe tratarse como una anomalia.
+Entre `focused` y el cierre de la selección final puede existir una revision humana supervisada de la matriz principal. Esa edicion manual es parte normal del flujo y no debe tratarse como una anomalia.
 
 Columnas de decision humana:
 
-- `Decision`
-- `Motivo de decision`
-- `Criterio aplicado`
+- `Decision de cribado`
+- `Motivo de cribado`
+- `Criterio de cribado`
 - `Revisar texto completo`
-- `Base de decision final`
-- `Observacion final`
+- `Base de seleccion final`
+- `Observacion de seleccion final`
 
 Columnas corregibles con evidencia:
 
@@ -134,18 +150,18 @@ Regla critica:
 - no borrar filas;
 - no cambiar `Codigo`, porque esa columna mantiene el vinculo entre la matriz, los archivos de decisiones y la integracion posterior con Zotero.
 
-Regla de contingencia para `final`:
+Regla de contingencia para la selección final:
 
 - si hay `texto completo`, úsalo como base principal de decisión;
-- si no hay `texto completo`, usa la mejor evidencia disponible y marca explícitamente que se trata de un `final sin texto completo`.
+- si no hay `texto completo`, usa la mejor evidencia disponible y marca explícitamente que se trata de una selección final sin texto completo.
 
-Regla de cierre para `final`:
+Regla de cierre para la selección final:
 
-- `final` no se considera cerrado cuando el agente propone una selección preliminar;
-- `final` se considera cerrado solo cuando el estudiante o docente confirma humanamente el corpus;
+- la selección final no se considera cerrada cuando el agente propone una selección preliminar;
+- la selección final se considera cerrada solo cuando el estudiante o docente confirma humanamente el corpus;
 - solo después de ese cierre pueden ejecutarse Zotero, extracción, evaluación de calidad y síntesis.
 
-No se recomienda pasar de tres niveles de cribado dentro de una misma corrida. Si después de `final` el conjunto sigue siendo demasiado amplio o poco pertinente, conviene refinar la búsqueda y lanzar una nueva corrida.
+No se recomienda pasar de dos niveles de cribado más una selección final dentro de una misma corrida. Si después de la selección final el conjunto sigue siendo demasiado amplio o poco pertinente, conviene refinar la búsqueda y lanzar una nueva corrida.
 
 ## Cómo usar los recursos del skill
 

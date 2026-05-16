@@ -10,9 +10,15 @@ from datetime import datetime
 from pathlib import Path
 
 from openalex_search import WORKSPACE_ROOT_KEY, resolve_workspace_path
+from run_outputs import refresh_run_outputs
 
 
-FINAL_COLUMNS = ["Base de decision final", "Observacion final"]
+SCREENING_DECISION_HEADER = "Decision de cribado"
+SCREENING_REASON_HEADER = "Motivo de cribado"
+SCREENING_CRITERION_HEADER = "Criterio de cribado"
+FINAL_BASIS_HEADER = "Base de seleccion final"
+FINAL_NOTE_HEADER = "Observacion de seleccion final"
+FINAL_COLUMNS = [FINAL_BASIS_HEADER, FINAL_NOTE_HEADER]
 
 
 def parse_args() -> argparse.Namespace:
@@ -89,16 +95,16 @@ def update_matrix(matrix_path: Path, decisions: dict[str, dict[str, str]]) -> st
         if line.startswith("| Codigo |") or line.startswith("| Código |"):
             parts = [part.strip() for part in line.strip().split("|")]
             columns = parts[1:-1]
-            if "Base de decision final" not in columns:
+            if FINAL_BASIS_HEADER not in columns:
                 columns.extend(FINAL_COLUMNS)
                 extend_separator = True
             try:
-                decision_idx = columns.index("Decision") + 1
-                reason_idx = columns.index("Motivo de decision") + 1
-                criterion_idx = columns.index("Criterio aplicado") + 1
+                decision_idx = columns.index(SCREENING_DECISION_HEADER) + 1
+                reason_idx = columns.index(SCREENING_REASON_HEADER) + 1
+                criterion_idx = columns.index(SCREENING_CRITERION_HEADER) + 1
                 full_text_idx = columns.index("Revisar texto completo") + 1
-                final_basis_idx = columns.index("Base de decision final") + 1
-                final_note_idx = columns.index("Observacion final") + 1
+                final_basis_idx = columns.index(FINAL_BASIS_HEADER) + 1
+                final_note_idx = columns.index(FINAL_NOTE_HEADER) + 1
             except ValueError:
                 decision_idx = reason_idx = criterion_idx = full_text_idx = None
                 final_basis_idx = final_note_idx = None
@@ -162,19 +168,81 @@ def collect_ids(rows: list[dict[str, str]], decision: str) -> list[str]:
     return [row.get("code", "").strip() for row in rows if row.get("decision", "").strip() == decision]
 
 
+def counter_lines(counter: Counter[str]) -> list[str]:
+    ordered = [(key, value) for key, value in counter.items() if key]
+    ordered.sort(key=lambda item: (-item[1], item[0].casefold()))
+    if not ordered:
+        return ["- `No reportado`: `0`"]
+    return [f"- `{key}`: `{value}`" for key, value in ordered]
+
+
+def phase_label(decisions_path: Path) -> str:
+    stem = decisions_path.stem.casefold()
+    if stem.endswith("_final"):
+        return "selección final / elegibilidad"
+    if stem.endswith("_focused"):
+        return "cribado focused"
+    if stem.endswith("_initial"):
+        return "cribado inicial"
+    return "cribado"
+
+
+def phase_methodology_lines(phase: str) -> list[str]:
+    if phase == "cribado inicial":
+        return [
+            "- Base principal de decisión: `título + resumen + metadatos básicos`",
+            "- Uso esperado: separar ruido evidente de señal potencial antes del `focused`",
+        ]
+    if phase == "cribado focused":
+        return [
+            "- Base principal de decisión: `título + resumen`, con mayor exigencia temática y metodológica",
+            "- Uso esperado: reevaluar solo los casos `Incluir` y `Dudoso` heredados de `initial`",
+        ]
+    if phase == "selección final / elegibilidad":
+        return [
+            "- Base principal de decisión: `texto completo` cuando está disponible",
+            "- Regla operativa: la elegibilidad final debe justificarse con acceso efectivo al estudio completo o dejar explícita la limitación",
+        ]
+    return [
+        "- Base principal de decisión: `No reportado`",
+    ]
+
+
 def write_summary(summary_path: Path, decisions_path: Path, rows: list[dict[str, str]]) -> None:
     counts = Counter(row.get("decision", "").strip() for row in rows)
     include_ids = collect_ids(rows, "Incluir")
     doubtful_ids = collect_ids(rows, "Dudoso")
+    criterion_counter = Counter(row.get("criterion", "").strip() for row in rows)
+    reason_counter = Counter(row.get("reason", "").strip() for row in rows)
+    phase = phase_label(decisions_path)
+    title = "# Resumen de selección final / elegibilidad" if phase == "selección final / elegibilidad" else "# Resumen de cribado"
+    total_label = "Total evaluado en selección final" if phase == "selección final / elegibilidad" else "Total cribado"
+    include_label = "Estudios incluidos en corpus final" if phase == "selección final / elegibilidad" else "Incluir"
+    doubtful_label = "Dudosos remanentes" if phase == "selección final / elegibilidad" else "Dudoso"
+    exclude_label = "Estudios excluidos en selección final" if phase == "selección final / elegibilidad" else "Excluir"
     lines = [
-        "# Resumen de cribado",
+        title,
         "",
         f"- Fecha: `{datetime.now().astimezone().isoformat(timespec='seconds')}`",
+        f"- Fase declarada: `{phase}`",
         f"- Iteracion / directorio: `{decisions_path.parent}`",
-        f"- Total cribado: `{len(rows)}`",
-        f"- Incluir: `{counts.get('Incluir', 0)}`",
-        f"- Dudoso: `{counts.get('Dudoso', 0)}`",
-        f"- Excluir: `{counts.get('Excluir', 0)}`",
+        f"- Archivo de decisiones aplicado: `{decisions_path}`",
+        f"- {total_label}: `{len(rows)}`",
+        f"- {include_label}: `{counts.get('Incluir', 0)}`",
+        f"- {doubtful_label}: `{counts.get('Dudoso', 0)}`",
+        f"- {exclude_label}: `{counts.get('Excluir', 0)}`",
+        "",
+        "## Base metodológica de la fase",
+        "",
+        *phase_methodology_lines(phase),
+        "",
+        "## Criterios aplicados",
+        "",
+        *counter_lines(criterion_counter),
+        "",
+        "## Motivos registrados",
+        "",
+        *counter_lines(reason_counter),
         "",
         "## Identificadores clave",
         "",
@@ -242,6 +310,8 @@ def main() -> int:
     update_matrix(matrix_path, decisions)
     export_matrix_csv(matrix_path, matrix_csv_path)
     write_summary(summary_path, decisions_path, rows)
+    run_dir = matrix_path.parent.parent if matrix_path.parent.name == "screening" else matrix_path.parent
+    refresh_run_outputs(run_dir)
     print(f"Updated screening matrix: {matrix_path}")
     print(f"Updated screening matrix CSV: {matrix_csv_path}")
     print(f"Updated screening summary: {summary_path}")

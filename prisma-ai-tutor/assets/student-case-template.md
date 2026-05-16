@@ -28,6 +28,7 @@ Cualquier propuesta o ajuste del skill debe ser validado por el estudiante antes
 - Esta plantilla debe mantenerse limpia en `assets/`.
 - Para un caso real, crea una copia en `cases/<tema-slug>/case.md`.
 - La ficha real del caso es el documento que debe evolucionar durante las fases.
+- El punto de entrada recomendado para navegar la corrida no es esta ficha, sino `outputs/<corrida>/run_overview.md`, que debe enlazar de vuelta a `case.md` y a los resúmenes por fase.
 
 ## Estado del caso
 
@@ -108,7 +109,7 @@ Recomendado. Si falta, el skill puede proponer un borrador inicial, pero no debe
 
 Nota:
 
-- si aquí se declara búsqueda en más de un idioma, la `query.txt` de la Fase 2 debe reflejarlo explícitamente o justificar la reducción;
+- si aquí se declara búsqueda en más de un idioma, la `search/query.txt` de la Fase 2 debe reflejarlo explícitamente o justificar la reducción;
 - si aquí se excluye `preprint` u otro tipo documental, la configuración técnica de la búsqueda debe trasladar esa exclusión a `OPENALEX_EXCLUDE_TYPES` o a los flags equivalentes.
 
 ## Configuración técnica para automatización
@@ -168,21 +169,21 @@ Opcional.
 
 [[...]]
 
-## Estado del corpus para cierre de `final`
+## Estado del corpus para cierre de la selección final
 
 Completar cuando el caso ya haya pasado por `focused` y por la validacion de accesibilidad o recuperacion local.
 
-- Fecha de cierre propuesta de `final`: [[...]]
+- Fecha de cierre propuesta de la selección final: [[...]]
 - Confirmacion humana del corpus final: [[pendiente / confirmada]]
-- Total de estudios incluidos en `final`: [[...]]
+- Total de estudios incluidos en la selección final: [[...]]
 - Estudios con base principal `Texto completo`: [[...]]
 - Estudios con base principal `Resumen y metadatos`: [[...]]
 - Observacion breve sobre la proporcion del corpus: [[...]]
 
 Nota:
 
-- este bloque ayuda a dejar trazabilidad de como paso el caso desde `focused` hasta el cierre real de `final`;
-- `final` solo se considera cerrado cuando la confirmacion humana ya consta aqui o en un artefacto equivalente del caso.
+- este bloque ayuda a dejar trazabilidad de como paso el caso desde `focused` hasta el cierre real de la selección final;
+- la selección final solo se considera cerrada cuando la confirmacion humana ya consta aqui o en un artefacto equivalente del caso.
 
 ## Autorización por fases
 
@@ -194,7 +195,7 @@ Obligatoria como control del flujo.
 - Fase 4. Cribado inicial: [[pendiente / aprobada]]
 - Fase 5. Cribado focused: [[pendiente / aprobada]]
 - Fase 6. Validación de accesibilidad y recuperación de full text: [[pendiente / aprobada]]
-- Fase 7. Cribado final: [[pendiente / aprobada]]
+- Fase 7. Selección final / evaluación de elegibilidad: [[pendiente / aprobada]]
 - Fase 8. Integración en Zotero: [[pendiente / aprobada]]
 - Fase 9. Extracción de evidencia: [[pendiente / aprobada]]
 - Fase 10. Evaluación de calidad: [[pendiente / aprobada]]

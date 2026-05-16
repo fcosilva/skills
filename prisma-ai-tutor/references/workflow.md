@@ -106,7 +106,7 @@ Clasificación:
 Cada decisión debe indicar:
 
 - Justificación.
-- Criterio aplicado.
+- Criterio de cribado.
 - Qué revisar en texto completo.
 
 Además, vigila que:
@@ -124,14 +124,15 @@ Niveles sugeridos de cribado:
 Regla práctica:
 
 - `initial` y `focused` pueden resolverse principalmente con título y abstract;
+- en la redacción de artefactos, `initial` debe describirse como fase basada en `título + resumen + metadatos básicos`, no como una fase de `título + metadatos` solamente;
 - `final` debería apoyarse ya en texto completo recuperado localmente o en evidencia ampliada suficiente para confirmar elegibilidad.
 - si el texto completo no está disponible, la decisión final puede apoyarse en resumen y metadatos, pero debe quedar explícita esa limitación.
 
 En la matriz de cribado conviene registrar además:
 
 - `Texto completo accesible`
-- `Base de decisión final`
-- `Observación final`
+- `Base de seleccion final`
+- `Observacion de seleccion final`
 
 ## Fase 6. Extracción de evidencia
 

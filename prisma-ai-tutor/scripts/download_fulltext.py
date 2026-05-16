@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib import error, request
 
 from openalex_search import WORKSPACE_ROOT_KEY, load_env_config, resolve_workspace_path
+from run_outputs import refresh_run_outputs
 
 
 DEFAULT_TIMEOUT = 20.0
@@ -28,7 +29,7 @@ def parse_args() -> argparse.Namespace:
             "screening matrix and decisions CSV."
         )
     )
-    parser.add_argument("--matrix", required=True, help="Path to screening_matrix.md.")
+    parser.add_argument("--matrix", required=True, help="Path to screening/screening_matrix.md.")
     parser.add_argument("--decisions", required=True, help="Path to screening decisions CSV.")
     parser.add_argument(
         "--decision",
@@ -46,11 +47,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--log",
-        help="Optional CSV log path. Default: fulltext_download_log.csv next to the decisions file.",
+        help="Optional CSV log path. Default: outputs/<run>/fulltext/fulltext_download_log.csv.",
     )
     parser.add_argument(
         "--summary",
-        help="Optional Markdown summary path. Default: fulltext_recovery_summary.md next to the decisions file.",
+        help="Optional Markdown summary path. Default: outputs/<run>/fulltext/fulltext_recovery_summary.md.",
     )
     parser.add_argument(
         "--cookies-file",
@@ -413,12 +414,12 @@ def main() -> int:
     log_path = (
         resolve_workspace_path(args.log, config_file, env_values)
         if args.log
-        else decisions_path.with_name("fulltext_download_log.csv")
+        else decisions_path.parent.parent / "fulltext" / "fulltext_download_log.csv"
     )
     summary_path = (
         resolve_workspace_path(args.summary, config_file, env_values)
         if args.summary
-        else decisions_path.with_name("fulltext_recovery_summary.md")
+        else decisions_path.parent.parent / "fulltext" / "fulltext_recovery_summary.md"
     )
     cookies_path = (
         resolve_workspace_path(args.cookies_file, config_file, env_values)
@@ -443,6 +444,8 @@ def main() -> int:
     }
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
 
     matrix_rows = parse_markdown_matrix(matrix_path)
     target_rows = load_target_codes(decisions_path, allowed_decisions)
@@ -490,6 +493,7 @@ def main() -> int:
 
     write_log(log_path, results)
     write_summary(summary_path, output_dir, results)
+    refresh_run_outputs(summary_path.parent.parent)
     downloaded = sum(1 for row in results if row["status"].startswith("downloaded_"))
     print(f"Downloaded {downloaded} files to: {output_dir}")
     print(f"Included decisions: {', '.join(sorted(allowed_decisions))}")

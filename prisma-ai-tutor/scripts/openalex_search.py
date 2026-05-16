@@ -22,6 +22,7 @@ from metadata_config import (
     load_metadata_config,
     render_markdown_header,
 )
+from run_outputs import refresh_run_outputs
 
 
 API_URL = "https://api.openalex.org/works"
@@ -871,6 +872,15 @@ def filter_raw_results(raw_results: list[dict[str, Any]], config: SearchConfig) 
     return filtered
 
 
+def post_api_filter_descriptions(config: SearchConfig) -> list[str]:
+    descriptions: list[str] = []
+    if config.require_abstract:
+        descriptions.append(
+            "Se excluyen localmente los registros sin `abstract_inverted_index` porque el caso exige `require_abstract=true`."
+        )
+    return descriptions
+
+
 def country_name(country_code: str) -> str:
     if not country_code:
         return ""
@@ -1049,6 +1059,8 @@ def build_search_log_text(
         "screening_columns": metadata_columns.get("screening_columns", []),
     }
     export_mode = "all_results" if config.fetch_all else f"max_results={config.max_results}"
+    local_post_filters = post_api_filter_descriptions(config)
+    fetched_before_post_filters = meta.get("count") if config.fetch_all else result_count + filtered_out_count
 
     lines = [
         "# Bitacora de busqueda OpenAlex",
@@ -1064,8 +1076,12 @@ def build_search_log_text(
         f"- Umbral operativo de muestra: `{config.sampling_threshold}`",
         f"- Filtros: `{json.dumps(filters, ensure_ascii=True)}`",
         f"- Resultados estimados por OpenAlex: `{meta.get('count', 'No reportado')}`",
+        f"- Registros recuperados por esta ejecucion antes de filtros locales: `{fetched_before_post_filters}`",
+        f"- Registros excluidos por reglas locales posteriores a la API: `{filtered_out_count}`",
         f"- Resultados exportados en esta ejecucion: `{result_count}`",
-        f"- Registros filtrados por reglas posteriores a la API: `{filtered_out_count}`",
+        "",
+        "## Trazabilidad del filtrado local",
+        "",
         "",
         "## Alertas de muestreo y volumen",
         "",
@@ -1096,6 +1112,11 @@ def build_search_log_text(
         "muestra operativa priorizada por OpenAlex, no como una seleccion metodologica final.",
         "",
     ]
+    insert_at = lines.index("## Alertas de muestreo y volumen") - 1
+    if local_post_filters:
+        lines[insert_at:insert_at] = [f"- {item}" for item in local_post_filters]
+    else:
+        lines[insert_at:insert_at] = ["- `No se aplicaron filtros locales posteriores a la API.`"]
     return "\n".join(lines)
 
 
@@ -1173,6 +1194,14 @@ def escape_pipe(value: Any) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ").strip()
 
 
+def search_output_dir(run_dir: Path) -> Path:
+    return run_dir / "search"
+
+
+def screening_output_dir(run_dir: Path) -> Path:
+    return run_dir / "screening"
+
+
 def main() -> int:
     try:
         config = parse_args()
@@ -1183,7 +1212,11 @@ def main() -> int:
         return 2
 
     ensure_dir(config.out_dir)
-    write_query_file(config.out_dir / config.query_output_name, config.query)
+    search_dir = search_output_dir(config.out_dir)
+    screening_dir = screening_output_dir(config.out_dir)
+    ensure_dir(search_dir)
+    ensure_dir(screening_dir)
+    write_query_file(search_dir / config.query_output_name, config.query)
     try:
         metadata_columns = load_metadata_config(config.metadata_config_file)
     except Exception as exc:  # noqa: BLE001
@@ -1208,6 +1241,7 @@ def main() -> int:
     summary = {
         "source": "OpenAlex",
         "query": config.query,
+        "config_file": str(config.config_file) if config.config_file else None,
         "search_mode": config.search_mode,
         "fetch_all": config.fetch_all,
         "max_results": config.max_results,
@@ -1224,22 +1258,22 @@ def main() -> int:
         "extraction_columns": metadata_columns.get("extraction_columns", []),
     }
 
-    write_json(config.out_dir / "raw_results.json", filtered_raw_results)
-    write_json(config.out_dir / "normalized_results.json", normalized)
-    write_json(config.out_dir / "summary.json", summary)
-    write_csv(config.out_dir / "normalized_results.csv", normalized)
+    write_json(search_dir / "raw_results.json", filtered_raw_results)
+    write_json(search_dir / "normalized_results.json", normalized)
+    write_json(search_dir / "summary.json", summary)
+    write_csv(search_dir / "normalized_results.csv", normalized)
     write_screening_matrix(
-        config.out_dir / "screening_matrix.md",
+        screening_dir / "screening_matrix.md",
         normalized,
         metadata_columns.get("screening_columns", []),
     )
     write_screening_matrix_csv(
-        config.out_dir / "screening_matrix.csv",
+        screening_dir / "screening_matrix.csv",
         normalized,
         metadata_columns.get("screening_columns", []),
     )
     search_log_text = write_search_log(
-        config.out_dir / "search_log.md",
+        search_dir / "search_log.md",
         config,
         meta,
         len(normalized),
@@ -1250,6 +1284,7 @@ def main() -> int:
     )
 
     print(search_log_text)
+    refresh_run_outputs(config.out_dir)
     print(f"Archivos exportados en: {config.out_dir}")
     return 0
 

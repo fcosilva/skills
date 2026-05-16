@@ -19,12 +19,12 @@ class ColumnDefinition:
 
 
 SCREENING_DECISION_COLUMNS = [
-    "Decision",
-    "Motivo de decision",
-    "Criterio aplicado",
+    "Decision de cribado",
+    "Motivo de cribado",
+    "Criterio de cribado",
     "Revisar texto completo",
-    "Base de decision final",
-    "Observacion final",
+    "Base de seleccion final",
+    "Observacion de seleccion final",
 ]
 
 

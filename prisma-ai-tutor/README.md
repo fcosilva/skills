@@ -40,12 +40,16 @@ skills/
     ├── SKILL.md
     ├── assets/
     │   ├── extraction-matrix.md
+    │   ├── extraction-summary.md
     │   ├── metadata-columns.yaml
     │   ├── base.env.template
     │   ├── case.env.template
     │   ├── protocol-template.md
     │   ├── quality-matrix.md
+    │   ├── quality-summary.md
+    │   ├── run-overview.md
     │   ├── screening-matrix.md
+    │   ├── screening-trace.md
     │   └── student-case-template.md
     ├── guides/
     │   ├── automation-by-phases.md
@@ -109,7 +113,7 @@ El flujo formal del agente se organiza por fases:
 4. cribado `initial`;
 5. cribado `focused`;
 6. validación de accesibilidad y recuperación local de full text;
-7. cribado `final`;
+7. selección final o evaluación de elegibilidad;
 8. integración bibliográfica en Zotero;
 9. extracción de evidencia;
 10. evaluación de calidad;
@@ -130,10 +134,31 @@ Regla para Zotero:
 Regla importante:
 
 - `initial` y `focused` trabajan principalmente con `título + resumen + metadatos`;
-- `final` idealmente ya incorpora texto preparado para revision desde `pdf_fulltext` o `html_fulltext`;
+- la selección final idealmente ya incorpora texto preparado para revision desde `pdf_fulltext` o `html_fulltext`;
 - si no existe full text, el agente debe marcar explícitamente que la base fue `Resumen y metadatos`.
-- `final` solo se considera cerrado cuando el estudiante o docente confirma humanamente el corpus.
-- Zotero debe recibir solo el conjunto ya confirmado en el cribado final del estudiante.
+- la selección final solo se considera cerrada cuando el estudiante o docente confirma humanamente el corpus.
+- Zotero debe recibir solo el conjunto ya confirmado en la selección final del estudiante.
+
+## Punto de entrada para el estudiante
+
+Cada corrida debería ofrecer un índice claro para no obligar al estudiante a abrir muchos archivos sin contexto.
+
+Orden recomendado de lectura:
+
+1. `case.md`
+2. `outputs/<corrida>/run_overview.md`
+3. resumen de la fase actual
+4. matriz o CSV solo si hace falta revisar detalle
+
+Plantilla sugerida para ese índice:
+
+- [assets/run-overview.md](assets/run-overview.md)
+
+Regla operativa:
+
+- cuando una fase cierra mediante los scripts del skill, el índice `run_overview.md` y los resúmenes derivados disponibles deben actualizarse automáticamente.
+- además, una corrida nueva puede sembrar automáticamente archivos base en `extraction/`, `quality/` y `synthesis/` como placeholders de trabajo.
+- esos placeholders no significan que la fase ya esté cerrada; solo preparan la estructura y el punto de entrada.
 
 ## Regla de busqueda y muestreo
 
@@ -154,24 +179,24 @@ Reglas complementarias:
 
 Regla para la matriz de cribado:
 
-- entre `focused` y el cierre de `final` puede existir edicion humana supervisada de la matriz;
+- entre `focused` y el cierre de la selección final puede existir edicion humana supervisada de la matriz;
 - las columnas de decision pueden ajustarse manualmente;
 - `Codigo` no debe cambiar, porque actua como clave de trazabilidad entre cribado, scripts y Zotero.
 
 ## Integración con Zotero
 
-Cuando el estudiante ya confirmó manualmente el cribado final, el siguiente paso recomendado es integrar el corpus seleccionado en Zotero.
+Cuando el estudiante ya confirmó manualmente la selección final, el siguiente paso recomendado es integrar el corpus seleccionado en Zotero.
 
 Reglas acordadas para esta integración:
 
-- deben entrar todos los estudios del cribado final, no solo los que tienen PDF accesible;
+- deben entrar todos los estudios de la selección final, no solo los que tienen PDF accesible;
 - si existe PDF local, el flujo actual lo copia primero a la carpeta configurada de Zotero;
 - no es necesario adjuntar el `.txt` extraído;
 - el ítem debe conservar también la URL de origen;
 - si el ítem ya existe en Zotero, se debe complementar la metadata faltante;
 - si el ítem ya existe pero está en otra colección, también debe añadirse a la colección destino indicada.
 - además, el flujo puede crear varias notas hijas por ítem:
-  - una nota mínima de cribado final en Fase 8;
+  - una nota mínima de selección final en Fase 8;
   - una nota nueva de extracción en Fase 9;
   - una nota nueva de calidad en Fase 10.
 
@@ -183,7 +208,7 @@ Configuración esperada para esta futura integración:
   - nombre de la colección;
   - ruta de la carpeta local fuente con PDFs;
   - ruta de la carpeta que Zotero usa para enlazar o almacenar PDFs;
-  - ruta de los artefactos de cribado final que se usarán como fuente de verdad.
+  - ruta de los artefactos de la selección final que se usarán como fuente de verdad.
 
 Parámetros ya reservados en la plantilla `.env`:
 
@@ -204,14 +229,14 @@ Scripts ya disponibles para esta integración:
 
 Artefactos esperados de esta fase:
 
-- `zotero_import_manifest.json`
-- `zotero_import_manifest.csv`
-- `zotero_attachment_copy_log.csv`
-- `zotero_import_summary.json`
-- `zotero_sync_summary.json`
-- `zotero_sync_actions.csv`
-- `zotero_notes_summary.json`
-- `zotero_notes_actions.csv`
+- `zotero/zotero_import_manifest.json`
+- `zotero/zotero_import_manifest.csv`
+- `zotero/zotero_attachment_copy_log.csv`
+- `zotero/zotero_import_summary.json`
+- `zotero/zotero_sync_summary.json`
+- `zotero/zotero_sync_actions.csv`
+- `zotero/zotero_notes_summary.json`
+- `zotero/zotero_notes_actions.csv`
 
 Limitación actual:
 
@@ -234,19 +259,27 @@ Scripts principales:
 
 Artefactos típicos por corrida:
 
-- `query.txt`
-- `normalized_results.json`
-- `normalized_results.csv`
-- `screening_matrix.md`
-- `screening_matrix.csv`
-- `search_log.md`
-- `screening_decisions_*.csv`
-- `screening_summary_*.md`
-- `fulltext_download_log.csv`
-- `fulltext_recovery_summary.md`
-- `fulltext_review_text_log.csv`
-- `fulltext_review_text_summary.md`
-- `extraction_matrix.md`
+- `run_overview.md`
+- `search/query.txt`
+- `search/normalized_results.json`
+- `search/normalized_results.csv`
+- `search/search_log.md`
+- `screening/screening_matrix.md`
+- `screening/screening_matrix.csv`
+- `screening/screening_decisions_*.csv`
+- `screening/screening_summary_*.md`
+- `screening/screening_trace.md`
+- `fulltext/fulltext_download_log.csv`
+- `fulltext/fulltext_recovery_summary.md`
+- `fulltext/fulltext_review_text_log.csv`
+- `fulltext/fulltext_review_text_summary.md`
+- `extraction/extraction_matrix.md`
+- `extraction/extraction_summary.md`
+- `quality/quality_matrix.md`
+- `quality/quality_summary.md`
+- `zotero/zotero_summary.md`
+- `synthesis/narrative_synthesis.md`
+- `synthesis/final_audit.md`
 
 ## Metadata generada
 

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from openalex_search import load_env_config, resolve_workspace_path
+from run_outputs import refresh_run_outputs
 
 
 @dataclass
@@ -65,7 +66,7 @@ def parse_args() -> ZoteroConfig:
         default=None,
         help=(
             "Directory for generated Zotero manifests and copy logs. "
-            "Default: sibling directory of screening_decisions."
+            "Default: outputs/<run>/zotero."
         ),
     )
 
@@ -98,7 +99,7 @@ def parse_args() -> ZoteroConfig:
     out_dir = (
         resolve_workspace_path(args.out_dir, config_file, env_config)
         if args.out_dir
-        else screening_decisions.parent
+        else screening_decisions.parent.parent / "zotero"
     )
 
     return ZoteroConfig(
@@ -131,6 +132,17 @@ def read_json_rows(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def find_normalized_results(screening_matrix: Path) -> Path:
+    candidates = [
+        screening_matrix.parent / "normalized_results.json",
+        screening_matrix.parent.parent / "search" / "normalized_results.json",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return screening_matrix.parent.parent / "search" / "normalized_results.json"
 
 
 def find_source_attachment(attachments_dir: Path, code: str) -> Path | None:
@@ -229,7 +241,7 @@ def prepare_import(config: ZoteroConfig) -> dict[str, Any]:
     decisions_rows = read_csv_rows(config.screening_decisions)
     matrix_rows = read_csv_rows(config.screening_matrix)
     matrix_by_code = {row.get("Codigo", "").strip(): row for row in matrix_rows}
-    normalized_path = config.screening_matrix.parent / "normalized_results.json"
+    normalized_path = find_normalized_results(config.screening_matrix)
     normalized_rows = read_json_rows(normalized_path)
     normalized_by_code = {str(row.get("code", "")).strip(): row for row in normalized_rows}
 
@@ -323,6 +335,7 @@ def main() -> int:
     write_csv(manifest_csv, result["manifest_rows"])
     write_csv(copy_log_csv, result["copy_log_rows"])
     write_json(summary_json, result["summary"])
+    refresh_run_outputs(config.out_dir.parent)
 
     print(f"Prepared Zotero manifest for {result['summary']['included_items']} items.")
     print(f"Library: {config.library}")

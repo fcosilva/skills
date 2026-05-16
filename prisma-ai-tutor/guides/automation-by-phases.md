@@ -16,7 +16,7 @@ Las fases de este flujo son secuenciales.
 
 - No se ejecutan en paralelo.
 - No se deben lanzar dos fases sobre el mismo caso al mismo tiempo.
-- No se debe actualizar el mismo `screening_matrix.md` desde dos iteraciones simultáneas.
+- No se debe actualizar el mismo `screening/screening_matrix.md` desde dos iteraciones simultáneas.
 - Cada fase debe terminar, persistir sus artefactos y quedar revisable antes de continuar.
 
 Si el agente necesita hacer trabajo adicional:
@@ -30,9 +30,35 @@ Si el agente necesita hacer trabajo adicional:
 - Ficha real del caso: copia de la plantilla en `cases/<tema-slug>/case.md`
 - Protocolo: [protocol-template.md](../assets/protocol-template.md)
 - Matriz de cribado: [screening-matrix.md](../assets/screening-matrix.md)
-- Query persistida: `query.txt` en el directorio de salida de cada búsqueda
+- Índice principal de cada corrida: [run-overview.md](../assets/run-overview.md)
+- Query persistida: `search/query.txt` en el directorio de salida de cada búsqueda
+- Historial de refinamiento de query: `search/query_history.md` en el directorio de salida cuando exista al menos una refinación sustantiva
 - Archivo de configuración del caso: [case.env.template](../assets/case.env.template) como plantilla de referencia
-- Resumen por iteración de cribado: `screening_summary_<fase>.md` en el directorio de salida de cada búsqueda
+- Resumen por iteración de cribado: `screening/screening_summary_<fase>.md` en el directorio de salida de cada búsqueda
+- Trazabilidad acumulada de cribado y selección final: [screening-trace.md](../assets/screening-trace.md)
+- Resumen de extracción: [extraction-summary.md](../assets/extraction-summary.md)
+- Resumen de calidad: [quality-summary.md](../assets/quality-summary.md)
+- Resumen de Zotero: [zotero-summary.md](../assets/zotero-summary.md)
+
+## Punto de entrada recomendado
+
+Para el estudiante, cada corrida debe tener un solo punto de entrada visible:
+
+- `outputs/<corrida>/run_overview.md`
+
+Desde ese índice deben enlazarse:
+
+- el `case.md` del caso;
+- el resumen de la fase actual;
+- la matriz principal si hace falta detalle;
+- los artefactos derivados relevantes de búsqueda, full text, Zotero, extracción, calidad y síntesis.
+
+Regla práctica:
+
+- al cerrar una fase con los scripts del skill, `run_overview.md` debe actualizarse automáticamente;
+- cuando haya artefactos suficientes, también deben actualizarse automáticamente `screening_trace.md`, `zotero_summary.md`, `extraction_summary.md` y `quality_summary.md`.
+- para ayudar al estudiante, una corrida nueva puede crear automáticamente placeholders en `extraction/`, `quality/` y `synthesis/`;
+- esos archivos placeholder no deben interpretarse como evidencia de fase cerrada.
 
 ## Fases recomendadas
 
@@ -71,7 +97,8 @@ Acción:
 
 - construir cadena inicial
 - ajustar tipo documental, idioma, fechas y demás filtros
-- guardar la cadena en `query.txt`
+- guardar la cadena en `search/query.txt`
+- si la cadena cambia de forma sustantiva en una nueva iteración, crear o actualizar `query_history.md`
 
 Reglas operativas:
 
@@ -86,7 +113,8 @@ Nota:
 
 Salida:
 
-- `query.txt`
+- `search/query.txt`
+- `query_history.md` cuando ya hubo refinamientos sustantivos
 - estrategia de búsqueda documentada
 
 Pausa:
@@ -97,7 +125,7 @@ Pausa:
 
 Entrada:
 
-- `query.txt`
+- `search/query.txt`
 - archivo de configuración disponible y validado por el estudiante
 - parámetros de OpenAlex
 
@@ -118,6 +146,11 @@ Regla metodológica de volumen:
 - si OpenAlex reporta más de `1000` resultados estimados, corresponde refinar la query antes del cribado inicial;
 - el orden de relevancia de OpenAlex solo puede usarse como última instancia operativa si el refinamiento no logra bajar suficientemente el volumen.
 
+Regla de trazabilidad:
+
+- si la corrida obliga a refinar la query, antes de reemplazar la versión vigente el agente debe registrar en `query_history.md` la versión previa, el motivo del cambio y el efecto observado;
+- el historial debe permitir reconstruir la secuencia de refinamientos del caso sin depender del recuerdo conversacional.
+
 Regla metodológica de elegibilidad mínima para entrar al conjunto exportado:
 
 - el caso puede exigir `abstract` disponible como filtro obligatorio de Fase 3;
@@ -126,12 +159,12 @@ Regla metodológica de elegibilidad mínima para entrar al conjunto exportado:
 
 Salida:
 
-- `raw_results.json`
-- `normalized_results.json`
-- `normalized_results.csv`
-- `screening_matrix.md`
-- `search_log.md`
-- `summary.json`
+- `search/raw_results.json`
+- `search/normalized_results.json`
+- `search/normalized_results.csv`
+- `screening/screening_matrix.md`
+- `search/search_log.md`
+- `search/summary.json`
 
 Pausa:
 
@@ -147,22 +180,22 @@ Nota:
 
 Entrada:
 
-- `screening_matrix.md`
+- `screening/screening_matrix.md`
 - pregunta y criterios de inclusión/exclusión
 
 Acción:
 
 - clasificar cada registro como `Incluir`, `Excluir` o `Dudoso`
 - completar en la misma matriz:
-  - `Decision`
-  - `Motivo de decision`
-  - `Criterio aplicado`
+  - `Decision de cribado`
+  - `Motivo de cribado`
+  - `Criterio de cribado`
   - `Revisar texto completo`
 
 Salida:
 
-- misma `screening_matrix.md` actualizada
-- `screening_summary_initial.md`
+- misma `screening/screening_matrix.md` actualizada
+- `screening/screening_summary_initial.md`
 
 Pausa:
 
@@ -199,18 +232,18 @@ Pausa:
 - si el conjunto sigue pobre o ruidoso, volver a Fase 2 y ajustar la query
 - si el conjunto es pertinente, pedir autorizacion para pasar a Fase 6
 
-## Regla para la revision humana entre `focused` y `final`
+## Regla para la revision humana entre `focused` y la selección final
 
-Entre `focused` y el cierre de `final` puede haber una revision humana supervisada de `screening_matrix.md` o de su equivalente en CSV. Esa revision forma parte esperada del proceso.
+Entre `focused` y el cierre de la selección final puede haber una revision humana supervisada de `screening/screening_matrix.md` o de su equivalente en CSV. Esa revision forma parte esperada del proceso.
 
 Columnas que el humano puede editar libremente:
 
-- `Decision`
-- `Motivo de decision`
-- `Criterio aplicado`
+- `Decision de cribado`
+- `Motivo de cribado`
+- `Criterio de cribado`
 - `Revisar texto completo`
-- `Base de decision final`
-- `Observacion final`
+- `Base de seleccion final`
+- `Observacion de seleccion final`
 
 Columnas que el humano puede corregir solo si hay evidencia clara:
 
@@ -232,7 +265,7 @@ Columnas que deben preservarse:
 - `URL DOI`
 - `URL OpenAlex`
 
-Antes de pasar a `final`, el agente debe asumir que:
+Antes de pasar a la selección final, el agente debe asumir que:
 
 - la edicion humana puede haber mejorado el juicio metodologico del caso;
 - pero la estructura del archivo debe seguir siendo valida;
@@ -260,14 +293,14 @@ Salida:
 - matriz con estado de accesibilidad actualizado
 - carpeta `cases/<slug>/fulltext/` con archivos fuente recuperados
 - log de recuperacion y resumen de accesibilidad
-- directorio derivado `outputs/<corrida>/fulltext_review_text/`
+- directorio derivado `outputs/<corrida>/fulltext/review_text/`
 - log y resumen de preparacion de texto para revision
 
 Pausa:
 
 - pedir autorizacion para pasar a Fase 7
 
-### Fase 7. Cribado final
+### Fase 7. Selección final / evaluación de elegibilidad
 
 Entrada:
 
@@ -292,7 +325,7 @@ Salida:
 
 Pausa:
 
-- confirmar que `final` ya quedo cerrado por validacion humana
+- confirmar que la selección final ya quedo cerrada por validacion humana
 - pedir autorizacion para pasar a Fase 8
 
 ### Fase 8. Integración en Zotero
@@ -300,7 +333,7 @@ Pausa:
 Entrada:
 
 - `screening_decisions_final.csv` confirmado por el estudiante
-- `screening_matrix.csv` o `screening_matrix.md` final
+- `screening/screening_matrix.csv` o `screening/screening_matrix.md` final
 - configuración de Zotero disponible en el `.env` operativo del caso
 
 Acción:
@@ -328,7 +361,7 @@ El agente debe pasar a Zotero solo cuando el caso haya cruzado claramente el umb
 Checklist mínima para activar Zotero:
 
 - existe `screening_decisions_final.csv`;
-- el `final` ya fue aplicado a la matriz del caso;
+- la selección final ya fue aplicada a la matriz del caso;
 - no quedan registros `Dudoso` que afecten el corpus objetivo;
 - la base de decisión final ya está marcada como `Texto completo` o `Resumen y metadatos`;
 - el estudiante o docente ya confirmó que ese conjunto es el corpus a conservar;
@@ -341,8 +374,8 @@ Si una de esas condiciones no se cumple:
 
 Regla simple:
 
-- `final confirmado` -> sí toca Zotero
-- `final pendiente` -> no toca Zotero
+- `selección final confirmada` -> sí toca Zotero
+- `selección final pendiente` -> no toca Zotero
 - `focused` o `initial` -> no toca Zotero
 
 ### Fase 9. Extracción de evidencia
@@ -360,7 +393,7 @@ Acción:
 
 Salida:
 
-- `extraction_matrix.md`
+- `extraction/extraction_matrix.md`
 - observaciones de extraccion por estudio
 
 Pausa:
@@ -430,9 +463,9 @@ Cada iteración de búsqueda y cribado debe dejar sus propios artefactos en un d
 
 Como mínimo, cada iteración debe conservar:
 
-- `query.txt`
+- `search/query.txt`
 - `search_log.md`
-- `screening_matrix.md`
+- `screening/screening_matrix.md`
 - `screening_decisions_<fase>.csv`
 - `screening_summary_<fase>.md`
 
@@ -513,20 +546,20 @@ Objetivo:
 Artefactos sugeridos:
 
 - carpeta local del caso, por ejemplo `cases/<tema-slug>/fulltext/`
-- `fulltext_download_log.csv`
+- `fulltext/fulltext_download_log.csv`
 - `fulltext_recovery_summary.md`
-- `outputs/<corrida>/fulltext_review_text/`
-- `fulltext_review_text_log.csv`
-- `fulltext_review_text_summary.md`
+- `outputs/<corrida>/fulltext/review_text/`
+- `fulltext/fulltext_review_text_log.csv`
+- `fulltext/fulltext_review_text_summary.md`
 
 Regla operativa:
 
-- esta subfase ocurre después de `focused` y antes de `final`;
-- el `final` del apoyo automatizado debe apoyarse primero en los textos preparados desde `pdf_fulltext` o `html_fulltext`;
-- si un estudio no pudo recuperarse, el `final` todavía puede hacerse con `Resumen y metadatos`, pero esa limitación debe quedar explícita.
+- esta subfase ocurre después de `focused` y antes de la selección final;
+- la selección final del apoyo automatizado debe apoyarse primero en los textos preparados desde `pdf_fulltext` o `html_fulltext`;
+- si un estudio no pudo recuperarse, la selección final todavía puede hacerse con `Resumen y metadatos`, pero esa limitación debe quedar explícita.
 - cuando un publisher imponga un challenge, puede usarse una sesión de navegador ya validada mediante un archivo de cookies exportado para intentar la recuperación asistida.
 
-### 3. `final`
+### 3. selección final / evaluación de elegibilidad
 
 Objetivo:
 
@@ -541,33 +574,33 @@ Regla:
 
 - aquí ya no basta solo con el título.
 - idealmente, esta etapa confirma elegibilidad definitiva para extracción.
-- si no hay texto completo, el `final` puede hacerse con la mejor evidencia disponible, pero debe quedar marcado como `final sin texto completo`.
+- si no hay texto completo, la selección final puede hacerse con la mejor evidencia disponible, pero debe quedar marcada como selección final sin texto completo.
 
 Salida esperada:
 
 - conjunto final candidato para texto completo y extracción;
 - justificación clara de por qué entran esos estudios y no otros.
-- indicación explícita de la base de decisión final:
+- indicación explícita de la base de selección final:
   - `Texto completo`
   - `Resumen y metadatos`
 
 Artefactos sugeridos:
 
 - `screening_decisions_final.csv`
-- `screening_summary_final.md`
-- actualización de `screening_matrix.md` con:
-  - `Base de decisión final`
-  - `Observación final`
+- `screening/screening_summary_final.md`
+- actualización de `screening/screening_matrix.md` con:
+  - `Base de seleccion final`
+  - `Observacion de seleccion final`
 
 Campos recomendados en la matriz para esta etapa:
 
 - `Texto completo accesible`
-- `Base de decisión final`
-- `Observación final`
+- `Base de seleccion final`
+- `Observacion de seleccion final`
 
 ### Paso posterior: confirmación humana e integración en Zotero
 
-El cierre real de `final` ocurre cuando el estudiante o docente confirma manualmente el conjunto.
+El cierre real de la selección final ocurre cuando el estudiante o docente confirma manualmente el conjunto.
 
 Solo después de esa confirmación conviene integrar el corpus en Zotero.
 
@@ -624,8 +657,8 @@ Limitación práctica actual:
 
 ## Límite recomendado
 
-- No pasar de `initial`, `focused` y `final` dentro de la misma corrida.
-- Si después de `final` el conjunto sigue siendo demasiado amplio o poco pertinente, no conviene inventar una cuarta ronda.
+- No pasar de `initial`, `focused` y selección final dentro de la misma corrida.
+- Si después de la selección final el conjunto sigue siendo demasiado amplio o poco pertinente, no conviene inventar una cuarta ronda.
 - En ese caso, lo correcto es volver a refinar la búsqueda y lanzar una nueva corrida.
 
 ## Regla simple para estudiantes
@@ -635,13 +668,13 @@ Puede entenderse así:
 - `initial`: filtro rápido con `título + resumen`.
 - `focused`: filtro más fino, todavía principalmente con `título + resumen`.
 - después de `focused`: validación operativa de accesibilidad y recuperación local del texto completo sobre el subconjunto priorizado.
-- `final`: confirmación antes de extracción, preferiblemente con `texto completo`.
+- selección final / evaluación de elegibilidad: confirmación antes de extracción, preferiblemente con `texto completo`.
 
 La idea es no leer textos completos demasiado pronto, pero tampoco cerrar la selección definitiva solo con resúmenes.
 
 ## Frases de transición sugeridas
 
 - `Fase 1 completada. ¿Autorizas que pase a la construcción de la query inicial?`
-- `La query ya quedó guardada en query.txt. ¿Autorizas ejecutar la búsqueda en OpenAlex?`
+- `La query ya quedó guardada en search/query.txt. ¿Autorizas ejecutar la búsqueda en OpenAlex?`
 - `La búsqueda ya generó una matriz inicial. ¿Autorizas el cribado preliminar sobre esa misma matriz?`
 - `El cribado sugiere refinar la estrategia. ¿Prefieres ajustar la query o pasar a extracción solo con los casos dudosos?`

@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from urllib.error import HTTPError
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from openalex_search import load_env_config, resolve_workspace_path
 from prepare_zotero_import import prepare_import, ZoteroConfig, resolve_required
+from run_outputs import refresh_run_outputs
 from zotero_mcp_client import ZoteroMCPClient
 
 
@@ -51,7 +53,7 @@ def parse_args() -> SyncConfig:
     parser.add_argument(
         "--out-dir",
         default=None,
-        help="Directory for sync logs. Default: sibling directory of screening decisions.",
+        help="Directory for sync logs. Default: outputs/<run>/zotero.",
     )
 
     args = parser.parse_args()
@@ -89,7 +91,7 @@ def parse_args() -> SyncConfig:
                 resolve_required(None, env_config, "ZOTERO_SCREENING_DECISIONS"),
                 config_file,
                 env_config,
-            ).parent
+            ).parent.parent / "zotero"
         ),
     )
     mcp_url = args.mcp_url or env_config.get("ZOTERO_MCP_URL", DEFAULT_MCP_URL).strip() or DEFAULT_MCP_URL
@@ -287,6 +289,38 @@ def create_item_payload(row: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def create_minimal_item_payload(row: dict[str, Any]) -> dict[str, Any]:
+    fields = {
+        key: value
+        for key, value in build_item_fields(row).items()
+        if key in {"title", "date", "url", "DOI", "language", "publicationTitle"}
+    }
+    payload = {
+        "action": "create",
+        "itemType": map_item_type(normalize_text(row.get("document_type"))),
+        "fields": fields,
+        "tags": [
+            "prisma-ai-tutor",
+            "openalex",
+            "final-confirmed",
+        ],
+    }
+    authors = normalize_text(row.get("authors"))
+    if authors:
+        payload["creators"] = parse_authors(authors)
+    return payload
+
+
+def create_item_with_fallback(client: ZoteroMCPClient, row: dict[str, Any]) -> tuple[str, str]:
+    payload = create_item_payload(row)
+    try:
+        created = client.call_tool("write_item", payload)
+        return extract_item_key(created), "full"
+    except HTTPError:
+        fallback = client.call_tool("write_item", create_minimal_item_payload(row))
+        return extract_item_key(fallback), "minimal_fallback"
+
+
 def extract_item_key(payload: Any) -> str:
     if isinstance(payload, dict):
         for key in ("key", "itemKey"):
@@ -316,7 +350,13 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     if not rows:
         path.write_text("", encoding="utf-8")
         return
-    fieldnames = list(rows[0].keys())
+    fieldnames: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        for key in row.keys():
+            if key not in seen:
+                seen.add(key)
+                fieldnames.append(key)
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -371,12 +411,11 @@ def sync(config: SyncConfig) -> dict[str, Any]:
             )
             continue
 
-        payload = create_item_payload(row)
         if config.dry_run:
             item_key = f"DRYRUN-{row['code']}"
+            create_mode = "dry_run"
         else:
-            created = client.call_tool("write_item", payload)
-            item_key = extract_item_key(created)
+            item_key, create_mode = create_item_with_fallback(client, row)
             client.call_tool(
                 "add_items_to_collection",
                 {"collectionKey": collection_key, "itemKeys": [item_key]},
@@ -387,6 +426,7 @@ def sync(config: SyncConfig) -> dict[str, Any]:
                 "title": row["title"],
                 "item_key": item_key,
                 "action": "create_new",
+                "create_mode": create_mode,
                 "collection_key": collection_key,
                 "attachment_status": row.get("attachment_status", ""),
                 "zotero_attachment_path": row.get("zotero_attachment_path", ""),
@@ -418,6 +458,7 @@ def main() -> int:
     actions_csv = config.zotero.out_dir / "zotero_sync_actions.csv"
     write_json(summary_json, result)
     write_csv(actions_csv, result["actions"])
+    refresh_run_outputs(config.zotero.out_dir.parent)
 
     print(
         f"Zotero sync {'preview' if config.dry_run else 'completed'} for "

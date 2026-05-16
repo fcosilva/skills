@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from openalex_search import WORKSPACE_ROOT_KEY, resolve_workspace_path
+from run_outputs import refresh_run_outputs
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,25 +56,63 @@ def collect_ids(rows: list[dict[str, str]], decision: str) -> list[str]:
     return [row.get("code", "").strip() for row in rows if row.get("decision", "").strip() == decision]
 
 
+def phase_label_from_output(source_dir: str | None, output_name: str | None) -> str:
+    haystack = " ".join(part for part in [source_dir or "", output_name or ""] if part).casefold()
+    if "final" in haystack:
+        return "selección final / elegibilidad"
+    if "focused" in haystack:
+        return "cribado focused"
+    if "initial" in haystack:
+        return "cribado inicial"
+    return "cribado"
+
+
+def phase_methodology_lines(phase: str) -> list[str]:
+    if phase == "cribado inicial":
+        return [
+            "- Base principal de decisión: `título + resumen + metadatos básicos`",
+            "- Uso esperado: separar ruido evidente de señal potencial antes del `focused`",
+        ]
+    if phase == "cribado focused":
+        return [
+            "- Base principal de decisión: `título + resumen`, con mayor exigencia temática y metodológica",
+            "- Uso esperado: reevaluar solo los casos `Incluir` y `Dudoso` heredados de `initial`",
+        ]
+    if phase == "selección final / elegibilidad":
+        return [
+            "- Base principal de decisión: `texto completo` cuando está disponible",
+            "- Regla operativa: la elegibilidad final debe justificarse con acceso efectivo al estudio completo o dejar explícita la limitación",
+        ]
+    return ["- Base principal de decisión: `No reportado`"]
+
+
 def build_summary(rows: list[dict[str, str]], source_dir: str | None, notes: str | None) -> str:
     counts = Counter(row.get("decision", "").strip() for row in rows)
     total = len(rows)
     include_ids = collect_ids(rows, "Incluir")
     doubtful_ids = collect_ids(rows, "Dudoso")
+    phase = phase_label_from_output(source_dir, None)
+    title = "# Resumen de selección final / elegibilidad" if phase == "selección final / elegibilidad" else "# Resumen de cribado"
+    total_label = "Total evaluado en selección final" if phase == "selección final / elegibilidad" else "Total cribado"
 
     lines = [
-        "# Resumen de cribado",
+        title,
         "",
         f"- Fecha: `{datetime.now().astimezone().isoformat(timespec='seconds')}`",
+        f"- Fase declarada: `{phase}`",
     ]
     if source_dir:
         lines.append(f"- Iteracion / directorio: `{source_dir}`")
     lines.extend(
         [
-            f"- Total cribado: `{total}`",
+            f"- {total_label}: `{total}`",
             f"- Incluir: `{counts.get('Incluir', 0)}`",
             f"- Dudoso: `{counts.get('Dudoso', 0)}`",
             f"- Excluir: `{counts.get('Excluir', 0)}`",
+            "",
+            "## Base metodológica de la fase",
+            "",
+            *phase_methodology_lines(phase),
             "",
             "## Identificadores clave",
             "",
@@ -118,8 +157,10 @@ def main() -> int:
         raise SystemExit(f"Decisions CSV not found: {decisions_path}")
 
     rows = load_rows(decisions_path)
-    summary = build_summary(rows, args.source_dir, args.notes)
+    summary = build_summary(rows, args.source_dir or str(output_path.parent), args.notes)
     output_path.write_text(summary, encoding="utf-8")
+    run_dir = decisions_path.parent.parent if decisions_path.parent.name == "screening" else decisions_path.parent
+    refresh_run_outputs(run_dir)
     print(f"Updated screening summary: {output_path}")
     return 0
 

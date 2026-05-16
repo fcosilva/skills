@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib import error, request
 
 from openalex_search import WORKSPACE_ROOT_KEY, resolve_workspace_path
+from run_outputs import refresh_run_outputs
 
 
 DEFAULT_TIMEOUT = 12.0
@@ -179,6 +180,8 @@ def main() -> int:
     mailto = args.mailto or os.getenv("OPENALEX_MAILTO")
     target_codes = load_decision_subset(decisions_path)
     changed = update_matrix(matrix_path, target_codes, mailto, args.timeout)
+    run_dir = matrix_path.parent.parent if matrix_path.parent.name == "screening" else matrix_path.parent
+    refresh_run_outputs(run_dir)
     print(f"Updated full-text accessibility for {changed} records in: {matrix_path}")
     return 0
 

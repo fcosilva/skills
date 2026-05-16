@@ -43,7 +43,7 @@ La IA puede apoyar, pero el estudiante debe:
 
 Ningún documento debe incluirse o excluirse sin:
 
-- Criterio aplicado.
+- Criterio de cribado.
 - Justificación.
 - Nivel de duda, si existe.
 
