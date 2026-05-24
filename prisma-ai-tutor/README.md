@@ -54,9 +54,14 @@ skills/
     ├── guides/
     │   ├── automation-by-phases.md
     │   ├── database-selection-guide.md
-    │   └── openalex-automation.md
+    │   ├── doaj-automation.md
+    │   ├── openalex-automation.md
+    │   └── redalyc-automation.md
     ├── scripts/
     │   ├── openalex_search.py
+    │   ├── scielo_search.py
+    │   ├── doaj_search.py
+    │   ├── redalyc_search.py
     │   ├── apply_screening_decisions.py
     │   ├── validate_fulltext_access.py
     │   └── ...
@@ -71,8 +76,10 @@ Documentos de apoyo dentro del propio skill:
 
 - [guides/automation-by-phases.md](guides/automation-by-phases.md)
 - [guides/openalex-automation.md](guides/openalex-automation.md)
+- [guides/doaj-automation.md](guides/doaj-automation.md)
+- [guides/redalyc-automation.md](guides/redalyc-automation.md)
 - [guides/database-selection-guide.md](guides/database-selection-guide.md)
-- carpeta de casos reales: [cases](../../cases)
+- carpeta de casos reales: [cases](../../../cases)
 - scripts de automatización: [scripts](scripts)
 
 ## Configuracion recomendada
@@ -96,6 +103,12 @@ Recomendación de uso:
 
 - si normalmente trabajarás varios casos dentro del mismo repositorio, conviene `config/prisma-ai-tutor/base.env` en el workspace;
 - si quieres reutilizar la misma configuración entre múltiples workspaces, conviene `~/.codex/prisma-ai-tutor/base.env`.
+
+Diferencia de alcance:
+
+- `base.env` contiene defaults compartidos, credenciales, retries y parámetros de entorno que rara vez cambian entre casos;
+- `case.env` contiene las rutas, fuentes activas, filtros metodológicos, queries y artefactos específicos de un caso;
+- `case.env` puede sobrescribir valores de `base.env` cuando un caso necesita una excepción puntual, pero no debería duplicar por defecto toda la configuración global.
 
 Regla de resolución de rutas:
 
@@ -135,7 +148,7 @@ Regla importante:
 
 - `initial` y `focused` trabajan principalmente con `título + resumen + metadatos`;
 - la selección final idealmente ya incorpora texto preparado para revision desde `pdf_fulltext` o `html_fulltext`;
-- si no existe full text, el agente debe marcar explícitamente que la base fue `Resumen y metadatos`.
+- si no existe full text, el estudio no debe entrar a la selección final del corpus.
 - la selección final solo se considera cerrada cuando el estudiante o docente confirma humanamente el corpus.
 - Zotero debe recibir solo el conjunto ya confirmado en la selección final del estudiante.
 
@@ -159,6 +172,9 @@ Regla operativa:
 - cuando una fase cierra mediante los scripts del skill, el índice `run_overview.md` y los resúmenes derivados disponibles deben actualizarse automáticamente.
 - además, una corrida nueva puede sembrar automáticamente archivos base en `extraction/`, `quality/` y `synthesis/` como placeholders de trabajo.
 - esos placeholders no significan que la fase ya esté cerrada; solo preparan la estructura y el punto de entrada.
+- esos placeholders deben vivir dentro de `outputs/<corrida>/extraction/`, `outputs/<corrida>/quality/` y `outputs/<corrida>/synthesis/`.
+- no se deben crear placeholders ni artefactos del caso en `outputs/` raíz.
+- si aparecen archivos como `outputs/extraction/...` o `outputs/synthesis/...` fuera de `outputs/<corrida>/`, se consideran artefactos mal ubicados y deben corregirse antes de continuar el flujo.
 
 ## Regla de busqueda y muestreo
 
@@ -200,6 +216,13 @@ Reglas acordadas para esta integración:
   - una nota nueva de extracción en Fase 9;
   - una nota nueva de calidad en Fase 10.
 
+Regla operativa obligatoria:
+
+- antes de lanzar Fase 8, el agente debe completar o corregir en `case.env` las variables `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX` con los artefactos reales de la corrida final vigente;
+- la integración en Zotero no queda cerrada solo con `prepare_zotero_import.py` o `sync_zotero_mcp.py`;
+- la Fase 8 se considera completa únicamente cuando también se ejecuta explícitamente `write_zotero_notes.py --phase screening` o un paso equivalente que cree la nota hija mínima de selección final;
+- el agente debe tratar la creación de notas como un subpaso obligatorio y verificable, no como un efecto implícito de la sincronización bibliográfica.
+
 Configuración esperada para esta futura integración:
 
 - la configuración operativa debe vivir en el archivo `.env` del proyecto;
@@ -227,6 +250,19 @@ Scripts ya disponibles para esta integración:
 - [scripts/write_zotero_notes.py](scripts/write_zotero_notes.py)
 - [scripts/zotero_mcp_client.py](scripts/zotero_mcp_client.py)
 
+Secuencia recomendada para Fase 8:
+
+1. `prepare_zotero_import.py`
+2. `sync_zotero_mcp.py`
+3. `write_zotero_notes.py --phase screening`
+
+Checklist de cierre de Fase 8:
+
+- `case.env` actualizado con `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX` de la corrida vigente;
+- items del corpus final sincronizados con la colección destino;
+- log de sincronización persistido;
+- notas hijas mínimas de `screening` creadas o actualizadas para cada ítem sincronizado.
+
 Artefactos esperados de esta fase:
 
 - `zotero/zotero_import_manifest.json`
@@ -245,25 +281,59 @@ Limitación actual:
 - por ahora no expone una herramienta directa para importar un PDF local como attachment nuevo;
 - por eso el flujo actual puede copiar PDFs a la carpeta configurada de Zotero y sincronizar metadata, pero el enlace automático del PDF como attachment depende de una capacidad futura del MCP o de un paso auxiliar.
 
-## Automatización OpenAlex
+## Automatización de fuentes programáticas
 
-La automatización abierta actual del agente se apoya en `OpenAlex`.
+La automatización abierta actual del agente se apoya sobre todo en `OpenAlex`, `DOAJ` y, cuando existe `API key`, `Redalyc`.
 
 Scripts principales:
 
 - [scripts/openalex_search.py](scripts/openalex_search.py)
+- [scripts/scielo_search.py](scripts/scielo_search.py)
+- [scripts/doaj_search.py](scripts/doaj_search.py)
+- [scripts/redalyc_search.py](scripts/redalyc_search.py)
+- [scripts/merge_search_results.py](scripts/merge_search_results.py)
 - [scripts/apply_screening_decisions.py](scripts/apply_screening_decisions.py)
 - [scripts/validate_fulltext_access.py](scripts/validate_fulltext_access.py)
 - [scripts/download_fulltext.py](scripts/download_fulltext.py)
 - [scripts/prepare_fulltext_review_text.py](scripts/prepare_fulltext_review_text.py)
 
+Estado actual de SciELO:
+
+- `scielo_search.py` es una primera automatización experimental para búsquedas por query en `SciELO Search`;
+- escribe sus artefactos en `search/scielo/` dentro de la corrida;
+- reutiliza la matriz común de `screening/` para permitir una futura integración multi-base;
+- su parser depende de la estructura HTML visible de SciELO Search, así que conviene validar una muestra cuando la interfaz cambie.
+
+Estado actual de DOAJ:
+
+- `doaj_search.py` consulta directamente la API oficial de artículos de DOAJ;
+- escribe sus artefactos en `search/doaj/` dentro de la corrida;
+- devuelve metadata especialmente útil para el cribado por `titulo + resumen`, incluyendo abstract, DOI, revista, idioma y enlace a full text;
+- por ahora aplica filtros de año de forma local sobre los resultados recuperados.
+
+Estado actual de Redalyc:
+
+- `redalyc_search.py` consulta la API documentada de Redalyc con `API key`;
+- escribe sus artefactos en `search/redalyc/` dentro de la corrida;
+- devuelve metadata suficiente para cribado local con `titulo + dc_description` cuando ese campo aparece, incluyendo titulo, autores, descripcion, idioma, tipo documental y fuente;
+- la API documentada no expone un filtro directo por `abstract` o `dc_description`, asi que la recuperacion se aproxima mejor a `title + filtros metadata` que a una busqueda simetrica por `titulo + resumen`;
+- en las pruebas actuales, la API no expone un total global tan claro como OpenAlex o DOAJ, asi que el control de volumen depende sobre todo de `max_results` y del refinamiento de query.
+
+Integración multi-fuente:
+
+- cuando un caso use dos o más fuentes programáticas, la recomendación es recuperar cada una en su subcarpeta (`search/openalex/`, `search/doaj/`, `search/redalyc/`, etc.) y luego fusionarlas antes del cribado común;
+- el script inicial para esa fusión es [scripts/merge_search_results.py](scripts/merge_search_results.py);
+- la política actual de deduplicación es:
+  - primero por DOI exacto normalizado;
+  - luego por combinación normalizada de `titulo + año`.
+
 Artefactos típicos por corrida:
 
 - `run_overview.md`
-- `search/query.txt`
-- `search/normalized_results.json`
-- `search/normalized_results.csv`
-- `search/search_log.md`
+- `search/openalex/query.txt`
+- `search/<fuente>/normalized_results.json`
+- `search/<fuente>/normalized_results.csv`
+- `search/<fuente>/search_log.md`
 - `screening/screening_matrix.md`
 - `screening/screening_matrix.csv`
 - `screening/screening_decisions_*.csv`

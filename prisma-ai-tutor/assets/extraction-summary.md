@@ -8,7 +8,7 @@
 
 ## Estado general
 
-- Matriz principal: [extraction_matrix.md](../extraction/extraction_matrix.md)
+- Matriz principal esperada: `extraction/extraction_matrix.md`
 - Estudios con extracción completa: [[...]]
 - Estudios pendientes: [[...]]
 - Responsable de revisión: [[...]]

@@ -89,6 +89,22 @@ Se recomienda porque reduce el sesgo anglocéntrico y mejora:
 - acceso a literatura en español y portugués;
 - visibilidad de contextos regionales que no siempre aparecen bien representados en bases comerciales.
 
+### Estado operativo actual de las fuentes regionales
+
+Para el uso real del skill conviene distinguir entre valor metodológico y madurez operativa:
+
+- `SciELO` sigue siendo valioso como fuente regional, pero su automatización programática todavía no forma parte del flujo normal del skill;
+- `SciELO Search` puede bloquear clientes HTTP simples, así que hoy se considera una vía experimental o semiasistida;
+- `Redalyc` sí expone una API documentada y requiere `API key` para las búsquedas;
+- en pruebas reales con clave válida, `Redalyc` ya devolvió registros JSON con `título`, `autores`, `dc_description` como resumen cuando está disponible, `año`, `tipo documental`, `idioma`, `fuente` y referencia al `PDF`;
+- la API documentada no expone un filtro directo por resumen, así que su recuperación se parece más a `title + filtros metadata` que a una búsqueda simétrica por `título + abstract`;
+- por eso, en el estado actual del skill, `OpenAlex` y `DOAJ` siguen siendo las fuentes abiertas activas, `SciELO` permanece como fuente regional semiasistida, y `Redalyc` pasa a ser una fuente regional técnicamente prometedora, pendiente solo de formalizar su integración en el flujo normal.
+
+Implicación pedagógica:
+
+- si el objetivo principal del trabajo es comparar cobertura regional como fenómeno metodológico, `SciELO` y `Redalyc` siguen siendo relevantes aunque su automatización sea parcial;
+- si el objetivo principal es ejecutar una corrida reproducible y automatizable con baja fricción, hoy conviene apoyarse primero en `OpenAlex` y `DOAJ`.
+
 ## Nota sobre cifras de cobertura
 
 Las cifras de cobertura cambian con el tiempo y no siempre son directamente comparables, porque cada proveedor cuenta cosas distintas:

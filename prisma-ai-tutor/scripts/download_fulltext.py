@@ -22,6 +22,11 @@ PROGRESS_EVERY = 10
 PROGRESS_EVERY_ENV = "PRISMA_PROGRESS_DOWNLOAD_EVERY"
 
 
+def is_matrix_data_row(line: str) -> bool:
+    stripped = line.strip()
+    return stripped.startswith("|") and not stripped.startswith("|---")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -157,7 +162,7 @@ def parse_markdown_matrix(path: Path) -> dict[str, dict[str, str]]:
             parts = [part.strip() for part in line.strip().split("|")]
             header = parts[1:-1]
             continue
-        if not line.startswith("| E") or header is None:
+        if not is_matrix_data_row(line) or header is None:
             continue
         parts = [part.strip() for part in line.strip().split("|")]
         values = parts[1:-1]

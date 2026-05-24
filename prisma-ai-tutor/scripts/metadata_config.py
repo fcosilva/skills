@@ -153,7 +153,7 @@ def screening_template_row(keys: list[str]) -> list[str]:
             "",
             "",
             "Si/No",
-            "Texto completo / Resumen y metadatos",
+            "Texto completo / Sin texto completo accesible",
             "",
         ]
     )

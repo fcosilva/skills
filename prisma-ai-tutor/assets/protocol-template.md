@@ -23,18 +23,24 @@ Nota de navegación:
 
 ## Fuentes de información
 
-- OpenAlex, DOAJ
+- OpenAlex, DOAJ, Redalyc
 - Scopus, WoS, Dimensions
 - SciELO, Redalyc 
 
 ## Configuración técnica de búsqueda
 
-- Query aprobada y persistida en `search/query.txt`
+- Query aprobada y persistida en `search/<fuente>/query.txt`
 - Archivo de configuración de OpenAlex disponible y validado por el estudiante
 - `OPENALEX_REQUIRE_ABSTRACT=true` cuando el caso exige trabajar solo con estudios con resumen disponible
 - Si se llega al cribado `focused`, la validación de `Texto completo accesible` debe hacerse sobre ese subconjunto antes de la selección final
 - Si el caso exige artículos revisados por pares, esto debe expresarse metodológicamente y no asumirse como campo automático de OpenAlex
 - `max_results` debe definirse junto con un umbral operativo de muestra
+
+Si el caso usa varias fuentes programáticas:
+
+- la Fase 2 debe dejar una `query` aprobada por fuente;
+- la estrategia conceptual puede ser común, pero la sintaxis no tiene por qué ser idéntica;
+- si hay adaptación por cobertura, campo de búsqueda o limitación técnica de la fuente, debe quedar justificada.
 
 ## Periodo de publicación
 
@@ -63,6 +69,12 @@ Nota de navegación:
 
 [...]
 
+Sugerencia de redacción cuando hay varias fuentes:
+
+- OpenAlex: `[...]`
+- DOAJ: `[...]`
+- Redalyc: `[...]`
+
 ## Historial de refinamiento de query
 
 Registrar cuando corresponda:
@@ -80,6 +92,7 @@ Nota metodológica:
 - si el volumen estimado supera `max_results`, primero corresponde decidir si se refina la query o si se autoriza una muestra acotada;
 - si el volumen estimado supera `1000`, corresponde refinar la query antes del cribado inicial;
 - el orden de relevancia de OpenAlex solo debe usarse como última instancia operativa cuando el refinamiento no logra reducir suficientemente el volumen.
+- si el caso usa varias fuentes, las diferencias entre queries por fuente no son una inconsistencia por sí mismas; solo deben quedar justificadas y trazadas.
 
 ## Meta de recuperación inicial
 
@@ -104,8 +117,8 @@ Registrar de forma breve:
 
 - cantidad de estudios priorizados tras `focused`;
 - cantidad de estudios con `Texto completo` confirmado;
-- cantidad de estudios que llegaron a la selección final con base `Resumen y metadatos`;
-- justificacion metodologica si una parte relevante del corpus no tuvo texto completo;
+- cantidad de estudios excluidos por falta de `Texto completo`;
+- justificacion metodologica si el subconjunto priorizado no logró recuperar suficiente texto completo;
 - constancia de confirmacion humana del corpus final.
 
 Esta seccion no reemplaza la matriz ni la ficha del caso. Su objetivo es dejar visible, dentro del protocolo, con que base real se cerró la selección final.

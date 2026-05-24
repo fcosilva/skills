@@ -109,8 +109,9 @@ Recomendado. Si falta, el skill puede proponer un borrador inicial, pero no debe
 
 Nota:
 
-- si aquí se declara búsqueda en más de un idioma, la `search/query.txt` de la Fase 2 debe reflejarlo explícitamente o justificar la reducción;
+- si aquí se declara búsqueda en más de un idioma, la `search/<fuente>/query.txt` de la Fase 2 debe reflejarlo explícitamente o justificar la reducción;
 - si aquí se excluye `preprint` u otro tipo documental, la configuración técnica de la búsqueda debe trasladar esa exclusión a `OPENALEX_EXCLUDE_TYPES` o a los flags equivalentes.
+- si el caso usa varias fuentes, la Fase 2 puede requerir una `query` distinta por fuente aunque la estrategia conceptual sea la misma.
 
 ## Configuración técnica para automatización
 
@@ -123,6 +124,7 @@ Obligatoria para pasar a la Fase 3 en el flujo formal.
 - Exigir artículos revisados por pares como criterio metodológico: [[sí / no]]
 - `max_results` objetivo: [[...]]
 - Umbral operativo de muestra: [[500 / otro]]
+- Fuentes activas para Fase 3: [[openalex / doaj / redalyc / combinación]]
 
 Nota:
 
@@ -132,6 +134,7 @@ Nota:
 - si se exige abstract, la configuración debe reflejar `OPENALEX_REQUIRE_ABSTRACT=true`;
 - si se exige revisión por pares, conviene usar `OPENALEX_TYPE=article`, pero la verificación fina no se deduce automáticamente de OpenAlex y debe confirmarse en el cribado humano;
 - la API key real no debe escribirse en la ficha; solo debe indicarse la disponibilidad y la ruta del archivo.
+- si hay varias fuentes, la Fase 2 debe dejar constancia de qué `query.txt` corresponde a cada una y por qué no necesariamente comparten la misma sintaxis literal.
 
 ## Criterios preliminares
 
@@ -177,8 +180,8 @@ Completar cuando el caso ya haya pasado por `focused` y por la validacion de acc
 - Confirmacion humana del corpus final: [[pendiente / confirmada]]
 - Total de estudios incluidos en la selección final: [[...]]
 - Estudios con base principal `Texto completo`: [[...]]
-- Estudios con base principal `Resumen y metadatos`: [[...]]
-- Observacion breve sobre la proporcion del corpus: [[...]]
+- Estudios excluidos por falta de `Texto completo`: [[...]]
+- Observacion breve sobre el cierre del corpus con full text: [[...]]
 
 Nota:
 

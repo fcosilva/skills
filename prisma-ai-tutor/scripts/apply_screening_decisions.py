@@ -19,6 +19,12 @@ SCREENING_CRITERION_HEADER = "Criterio de cribado"
 FINAL_BASIS_HEADER = "Base de seleccion final"
 FINAL_NOTE_HEADER = "Observacion de seleccion final"
 FINAL_COLUMNS = [FINAL_BASIS_HEADER, FINAL_NOTE_HEADER]
+FULLTEXT_KINDS = {"pdf_fulltext", "html_fulltext"}
+
+
+def is_matrix_data_row(line: str) -> bool:
+    stripped = line.strip()
+    return stripped.startswith("|") and not stripped.startswith("|---")
 
 
 def parse_args() -> argparse.Namespace:
@@ -80,6 +86,50 @@ def load_decisions(path: Path) -> tuple[dict[str, dict[str, str]], list[dict[str
     return decisions, rows
 
 
+def load_download_access_kinds(run_dir: Path) -> dict[str, str]:
+    download_log = run_dir / "fulltext" / "fulltext_download_log.csv"
+    if not download_log.exists():
+        return {}
+    with download_log.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    return {
+        row.get("code", "").strip(): row.get("access_kind", "").strip()
+        for row in rows
+        if row.get("code", "").strip()
+    }
+
+
+def validate_final_inclusions(rows: list[dict[str, str]], decisions_path: Path) -> None:
+    if phase_label(decisions_path) != "selección final / elegibilidad":
+        return
+    run_dir = decisions_path.parent.parent if decisions_path.parent.name == "screening" else decisions_path.parent
+    access_kinds = load_download_access_kinds(run_dir)
+    invalid: list[str] = []
+    for row in rows:
+        if row.get("decision", "").strip() != "Incluir":
+            continue
+        code = row.get("code", "").strip()
+        full_text = row.get("full_text", "").strip()
+        final_basis = row.get("final_basis", "").strip()
+        access_kind = access_kinds.get(code)
+        if full_text != "Si" or final_basis != "Texto completo":
+            invalid.append(
+                f"{code}: decision=Incluir requiere full_text=Si y final_basis=Texto completo"
+            )
+            continue
+        if access_kind is not None and access_kind not in FULLTEXT_KINDS:
+            invalid.append(
+                f"{code}: access_kind={access_kind or 'No reportado'} no es texto completo util"
+            )
+    if invalid:
+        details = "\n- ".join(invalid)
+        raise SystemExit(
+            "La selección final contiene inclusiones sin texto completo verificable.\n"
+            "Corrige `screening_decisions_final.csv` o recupera texto completo antes de aplicar la fase.\n"
+            f"- {details}"
+        )
+
+
 def update_matrix(matrix_path: Path, decisions: dict[str, dict[str, str]]) -> str:
     lines = matrix_path.read_text(encoding="utf-8").splitlines()
     updated: list[str] = []
@@ -119,7 +169,7 @@ def update_matrix(matrix_path: Path, decisions: dict[str, dict[str, str]]) -> st
             extend_separator = False
             continue
 
-        if not line.startswith("| E"):
+        if not is_matrix_data_row(line):
             updated.append(line)
             continue
 
@@ -262,7 +312,7 @@ def export_matrix_csv(matrix_markdown_path: Path, csv_path: Path) -> None:
         if line.startswith("| Codigo |") or line.startswith("| Código |"):
             header = [part.strip() for part in line.strip().split("|")[1:-1]]
             continue
-        if header is None or line.startswith("|---") or not line.startswith("| E"):
+        if header is None or not is_matrix_data_row(line):
             continue
         rows.append([part.strip() for part in line.strip().split("|")[1:-1]])
 
@@ -307,6 +357,7 @@ def main() -> int:
         raise SystemExit(f"Decisions CSV not found: {decisions_path}")
 
     decisions, rows = load_decisions(decisions_path)
+    validate_final_inclusions(rows, decisions_path)
     update_matrix(matrix_path, decisions)
     export_matrix_csv(matrix_path, matrix_csv_path)
     write_summary(summary_path, decisions_path, rows)

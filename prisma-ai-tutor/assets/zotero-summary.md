@@ -18,9 +18,9 @@
 
 ## Artefactos principales
 
-- [zotero_import_summary.json](../zotero/zotero_import_summary.json)
-- [zotero_sync_summary.json](../zotero/zotero_sync_summary.json)
-- [zotero_notes_summary.json](../zotero/zotero_notes_summary.json)
+- `zotero/zotero_import_summary.json`
+- `zotero/zotero_sync_summary.json`
+- `zotero/zotero_notes_summary.json`
 
 ## Observaciones
 

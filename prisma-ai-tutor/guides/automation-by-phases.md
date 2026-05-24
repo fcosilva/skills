@@ -31,8 +31,8 @@ Si el agente necesita hacer trabajo adicional:
 - Protocolo: [protocol-template.md](../assets/protocol-template.md)
 - Matriz de cribado: [screening-matrix.md](../assets/screening-matrix.md)
 - Índice principal de cada corrida: [run-overview.md](../assets/run-overview.md)
-- Query persistida: `search/query.txt` en el directorio de salida de cada búsqueda
-- Historial de refinamiento de query: `search/query_history.md` en el directorio de salida cuando exista al menos una refinación sustantiva
+- Query persistida por fuente: `search/<fuente>/query.txt` en el directorio de salida de cada búsqueda
+- Historial de refinamiento de query: `search/<fuente>/query_history.md` en el directorio de salida cuando exista al menos una refinación sustantiva
 - Archivo de configuración del caso: [case.env.template](../assets/case.env.template) como plantilla de referencia
 - Resumen por iteración de cribado: `screening/screening_summary_<fase>.md` en el directorio de salida de cada búsqueda
 - Trazabilidad acumulada de cribado y selección final: [screening-trace.md](../assets/screening-trace.md)
@@ -59,6 +59,9 @@ Regla práctica:
 - cuando haya artefactos suficientes, también deben actualizarse automáticamente `screening_trace.md`, `zotero_summary.md`, `extraction_summary.md` y `quality_summary.md`.
 - para ayudar al estudiante, una corrida nueva puede crear automáticamente placeholders en `extraction/`, `quality/` y `synthesis/`;
 - esos archivos placeholder no deben interpretarse como evidencia de fase cerrada.
+- todos esos placeholders y artefactos derivados deben quedar dentro del mismo `outputs/<corrida>/`;
+- el agente no debe crear ni actualizar artefactos del caso en `outputs/` raíz;
+- antes de escribir artefactos manuales o automatizados, el agente debe validar que la ruta destino incluya explícitamente `outputs/<corrida>/`.
 
 ## Fases recomendadas
 
@@ -97,25 +100,50 @@ Acción:
 
 - construir cadena inicial
 - ajustar tipo documental, idioma, fechas y demás filtros
-- guardar la cadena en `search/query.txt`
+- guardar la cadena en `search/<fuente>/query.txt`
 - si la cadena cambia de forma sustantiva en una nueva iteración, crear o actualizar `query_history.md`
+
+Modo multi-fuente recomendado:
+
+- si el caso activa más de una fuente, Fase 2 debe producir una `query` por fuente;
+- no asumas que la sintaxis exacta puede reutilizarse sin cambios entre `OpenAlex`, `DOAJ` y `Redalyc`;
+- parte de una estrategia conceptual comun, pero traduce cada version al comportamiento real de la fuente;
+- deja visible la version aprobada en:
+  - `search/openalex/query.txt`
+  - `search/doaj/query.txt`
+  - `search/redalyc/query.txt`
+- si una fuente necesita una version mas simple, mas corta o con distinto campo de búsqueda, registra esa decision metodologica en su propio `query_history.md`.
 
 Reglas operativas:
 
 - si el caso o el protocolo especifican más de un idioma de búsqueda, la query debe reflejarlo explícitamente o dejar justificación metodológica de por qué se reduce a uno;
 - si el protocolo excluye tipos documentales como `preprint`, esa exclusión debe traducirse al filtro técnico correspondiente antes de ejecutar la búsqueda;
 - el agente no debe inferir tipos documentales adicionales si el caso ya los delimitó explícitamente.
+- en `Redalyc`, además de la cadena, debe quedar justificado el `search_field` usado cuando no sea `title`;
+- en `Redalyc`, `subject` representa disciplina o descriptores tematicos, no resumen; no lo trates como reemplazo de `abstract`;
+- en `DOAJ`, el filtro por año se aplica localmente, así que la query no necesita forzar esa sintaxis si la fuente no la soporta de forma equivalente;
+- en `OpenAlex`, conviene distinguir entre la parte textual de la query y los filtros técnicos del `.env`.
 
 Nota:
 
 - aunque el script permite recibir la query directamente por parámetro, en el flujo formal del skill esta fase debe producir y dejar aprobado `query.txt` antes de ejecutar la búsqueda.
 - si el caso excluye `preprint`, conviene dejarlo también reflejado en `OPENALEX_EXCLUDE_TYPES` o con `--exclude-type preprint`.
 
+Transición obligatoria:
+
+- al cerrar Fase 2, el agente debe pedir autorización breve del usuario antes de ejecutar Fase 3.
+
 Salida:
 
-- `search/query.txt`
-- `query_history.md` cuando ya hubo refinamientos sustantivos
+- `search/<fuente>/query.txt`
+- `search/<fuente>/query_history.md` cuando ya hubo refinamientos sustantivos
 - estrategia de búsqueda documentada
+
+Si hay varias fuentes activas:
+
+- un `query.txt` por fuente;
+- cero o más `query_history.md` por fuente;
+- constancia breve en el protocolo de qué partes de la estrategia conceptual fueron comunes y cuáles se adaptaron por sintaxis o cobertura.
 
 Pausa:
 
@@ -125,7 +153,7 @@ Pausa:
 
 Entrada:
 
-- `search/query.txt`
+- `search/<fuente>/query.txt`
 - archivo de configuración disponible y validado por el estudiante
 - parámetros de OpenAlex
 
@@ -135,6 +163,30 @@ Acción:
 - generar resultados normalizados
 - generar matriz inicial de cribado
 - generar bitácora
+
+Modo multi-fuente recomendado:
+
+- si el caso activa más de una fuente programática, Fase 3 debe seguir siendo una sola fase secuencial;
+- ejecuta las fuentes una por una, nunca en paralelo, y usa un único directorio de corrida compartido;
+- al terminar las fuentes activas, fusiona y deduplica antes de pasar a Fase 4;
+- la matriz válida para `initial` debe ser la matriz fusionada, no una matriz intermedia de una sola fuente.
+
+Script orquestador recomendado para esta modalidad:
+
+- [scripts/phase3_multisource_search.py](../scripts/phase3_multisource_search.py)
+
+Configuración mínima recomendada en `case.env`:
+
+- `PRISMA_PHASE3_SOURCES=openalex,doaj,redalyc`
+- `PRISMA_PHASE3_AUTO_MERGE=true`
+- todos los `*_OUT_DIR` activos deben apuntar al mismo `outputs/<corrida>`
+
+Ejemplo:
+
+```bash
+python3 .codex/skills/prisma-ai-tutor/scripts/phase3_multisource_search.py \
+  --config-file cases/mi-caso/case.env
+```
 
 Regla metodológica de volumen:
 
@@ -160,11 +212,23 @@ Regla metodológica de elegibilidad mínima para entrar al conjunto exportado:
 Salida:
 
 - `search/raw_results.json`
-- `search/normalized_results.json`
-- `search/normalized_results.csv`
+- `search/<fuente>/normalized_results.json`
+- `search/<fuente>/normalized_results.csv`
 - `screening/screening_matrix.md`
-- `search/search_log.md`
-- `search/summary.json`
+- `search/<fuente>/search_log.md`
+- `search/<fuente>/summary.json`
+
+Si hay más de una fuente activa, además:
+
+- `search/phase3_multisource_summary.json`
+- `search/phase3_multisource_log.md`
+- `search/merged_normalized_results.json`
+- `search/merged_normalized_results.csv`
+- `search/merged_summary.json`
+- `search/source_merge_log.md`
+- `search/source_merge_log.csv`
+- `screening/screening_matrix.md`
+- `screening/screening_matrix.csv`
 
 Pausa:
 
@@ -175,6 +239,38 @@ Nota:
 
 - aunque el script puede operar sin configuración como capacidad técnica general, en el flujo formal del skill esta fase debe ejecutarse con archivo de configuración.
 - cuando el volumen exportado ya es una muestra acotada, Fase 4 trabaja sobre esa muestra y no sobre la totalidad estimada por OpenAlex.
+- si el caso usa más de una fuente programática, cada fuente debe poblar primero su subcarpeta en `search/` y luego pasar por una fusión explícita antes del cribado común.
+- ejemplos actuales de subcarpetas por fuente:
+  - `search/openalex/`
+  - `search/doaj/`
+  - `search/redalyc/`
+
+#### Fusión multi-fuente antes del cribado común
+
+Cuando el caso combina dos o más fuentes programáticas, la transición correcta es:
+
+1. ejecutar la búsqueda de cada fuente por separado;
+2. generar `search/<fuente>/normalized_results.json`;
+3. fusionar resultados y deduplicar;
+4. regenerar la matriz común de `screening/`.
+
+Si quieres que Fase 3 complete esos cuatro pasos de forma secuencial dentro de una misma corrida, usa:
+
+- [scripts/phase3_multisource_search.py](../scripts/phase3_multisource_search.py)
+
+Script disponible:
+
+- [scripts/merge_search_results.py](../scripts/merge_search_results.py)
+
+Artefactos esperados:
+
+- `search/merged_normalized_results.json`
+- `search/merged_normalized_results.csv`
+- `search/merged_summary.json`
+- `search/source_merge_log.md`
+- `search/source_merge_log.csv`
+- `screening/screening_matrix.md`
+- `screening/screening_matrix.csv`
 
 ### Fase 4. Cribado inicial
 
@@ -286,7 +382,7 @@ Acción:
 - recuperar localmente los archivos fuente cuando sea posible
 - distinguir entre `pdf_fulltext`, `html_fulltext`, `landing_metadata_only` y `blocked_or_error`
 - preparar texto legible para revisión asistida a partir de los `pdf_fulltext` y `html_fulltext`
-- registrar que estudios tienen `texto completo` realmente util para lectura y cuales dependen de `Resumen y metadatos`
+- registrar qué estudios tienen `texto completo` realmente útil para lectura y cuáles deben excluirse por falta de texto completo
 
 Salida:
 
@@ -313,7 +409,7 @@ Acción:
 
 - cerrar la seleccion del corpus final
 - usar como base principal los textos preparados desde `pdf_fulltext` o `html_fulltext` cuando existan
-- si no existe `texto completo`, justificar explicitamente el uso de `Resumen y metadatos`
+- si no existe `texto completo`, el estudio no debe pasar a selección final como incluido
 - incorporar la revision humana supervisada como parte del cierre
 - dejar el conjunto final sin dependencias metodologicas pendientes
 
@@ -338,6 +434,7 @@ Entrada:
 
 Acción:
 
+- actualizar `case.env` con `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX` de la corrida final vigente
 - preparar el paquete de importación para Zotero
 - sincronizar los ítems bibliográficos con la colección objetivo
 - copiar PDFs locales cuando existan y el flujo lo permita
@@ -347,7 +444,22 @@ Salida:
 
 - manifiesto o artefactos de preparación para Zotero
 - log de sincronización
-- notas hijas mínimas de cribado final generadas o planificadas
+- notas hijas mínimas de cribado final generadas
+
+Secuencia obligatoria de Fase 8:
+
+1. actualizar `case.env` con las rutas vigentes de `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX`
+2. ejecutar `scripts/prepare_zotero_import.py`
+3. ejecutar `scripts/sync_zotero_mcp.py`
+4. ejecutar `scripts/write_zotero_notes.py --phase screening`
+5. verificar que existan artefactos de sincronización y de notas antes de declarar la fase como cerrada
+
+Regla de cierre:
+
+- Fase 8 no termina cuando el corpus ya fue agregado a la colección;
+- Fase 8 no debe comenzar con `ZOTERO_SCREENING_DECISIONS` o `ZOTERO_SCREENING_MATRIX` vacíos o apuntando a una corrida vieja;
+- Fase 8 termina solo cuando el corpus está en la colección y la nota hija mínima de `screening` fue creada o actualizada para cada ítem;
+- si falta el paso 4, el agente debe considerar la fase incompleta aunque la sincronización bibliográfica haya sido exitosa.
 
 Pausa:
 
@@ -363,7 +475,7 @@ Checklist mínima para activar Zotero:
 - existe `screening_decisions_final.csv`;
 - la selección final ya fue aplicada a la matriz del caso;
 - no quedan registros `Dudoso` que afecten el corpus objetivo;
-- la base de decisión final ya está marcada como `Texto completo` o `Resumen y metadatos`;
+- la base de decisión final ya está marcada como `Texto completo` o `Sin texto completo accesible`;
 - el estudiante o docente ya confirmó que ese conjunto es el corpus a conservar;
 - la configuración mínima de Zotero ya está disponible.
 
@@ -463,8 +575,8 @@ Cada iteración de búsqueda y cribado debe dejar sus propios artefactos en un d
 
 Como mínimo, cada iteración debe conservar:
 
-- `search/query.txt`
-- `search_log.md`
+- `search/<fuente>/query.txt`
+- `search/<fuente>/search_log.md`
 - `screening/screening_matrix.md`
 - `screening_decisions_<fase>.csv`
 - `screening_summary_<fase>.md`
@@ -556,7 +668,7 @@ Regla operativa:
 
 - esta subfase ocurre después de `focused` y antes de la selección final;
 - la selección final del apoyo automatizado debe apoyarse primero en los textos preparados desde `pdf_fulltext` o `html_fulltext`;
-- si un estudio no pudo recuperarse, la selección final todavía puede hacerse con `Resumen y metadatos`, pero esa limitación debe quedar explícita.
+- si un estudio no pudo recuperarse, debe quedar fuera del corpus final salvo que se consiga luego el texto completo.
 - cuando un publisher imponga un challenge, puede usarse una sesión de navegador ya validada mediante un archivo de cookies exportado para intentar la recuperación asistida.
 
 ### 3. selección final / evaluación de elegibilidad
@@ -567,14 +679,14 @@ Objetivo:
 
 Base principal de decisión:
 
-- lectura asistida de texto preparado cuando sea posible;
-- si el texto completo no está disponible todavía, usar el resumen ampliado y dejar la limitación explícita.
+- lectura asistida de texto preparado desde `pdf_fulltext` o `html_fulltext`;
+- si el texto completo no está disponible todavía, el estudio no debe incluirse en el corpus final.
 
 Regla:
 
-- aquí ya no basta solo con el título.
-- idealmente, esta etapa confirma elegibilidad definitiva para extracción.
-- si no hay texto completo, la selección final puede hacerse con la mejor evidencia disponible, pero debe quedar marcada como selección final sin texto completo.
+- aquí ya no basta solo con el título ni con el resumen.
+- esta etapa confirma elegibilidad definitiva para extracción.
+- si no hay texto completo, la selección final no debe incluir ese estudio en el corpus.
 
 Salida esperada:
 
@@ -582,7 +694,7 @@ Salida esperada:
 - justificación clara de por qué entran esos estudios y no otros.
 - indicación explícita de la base de selección final:
   - `Texto completo`
-  - `Resumen y metadatos`
+  - `Sin texto completo accesible`
 
 Artefactos sugeridos:
 
@@ -618,7 +730,7 @@ Reglas acordadas:
 - el ítem debe conservar la URL de origen;
 - si el ítem ya existe, se complementa su metadata;
 - si ya existe en otra colección, también debe añadirse a la colección objetivo.
-- en Fase 8 conviene crear una nota hija mínima de trazabilidad por ítem;
+- en Fase 8 se debe crear una nota hija mínima de trazabilidad por ítem;
 - en Fase 9 conviene agregar una nota hija nueva de extracción por ítem;
 - en Fase 10 conviene agregar una nota hija nueva de calidad por ítem.
 
@@ -648,6 +760,12 @@ Scripts ya disponibles para esta etapa:
 - `scripts/write_zotero_notes.py`
 - `scripts/zotero_mcp_client.py`
 
+Interpretación práctica para el agente:
+
+- `sync_zotero_mcp.py` no reemplaza `write_zotero_notes.py`;
+- si el agente termina `sync_zotero_mcp.py`, debe preguntarse explícitamente si ya ejecutó la nota de `screening`;
+- solo después de esa nota puede pasar de Fase 8 a Fase 9.
+
 Limitación práctica actual:
 
 - el MCP de Zotero sí permite trabajar con colecciones e ítems bibliográficos;
@@ -668,13 +786,13 @@ Puede entenderse así:
 - `initial`: filtro rápido con `título + resumen`.
 - `focused`: filtro más fino, todavía principalmente con `título + resumen`.
 - después de `focused`: validación operativa de accesibilidad y recuperación local del texto completo sobre el subconjunto priorizado.
-- selección final / evaluación de elegibilidad: confirmación antes de extracción, preferiblemente con `texto completo`.
+- selección final / evaluación de elegibilidad: confirmación antes de extracción, obligatoriamente con `texto completo` para los estudios incluidos.
 
 La idea es no leer textos completos demasiado pronto, pero tampoco cerrar la selección definitiva solo con resúmenes.
 
 ## Frases de transición sugeridas
 
 - `Fase 1 completada. ¿Autorizas que pase a la construcción de la query inicial?`
-- `La query ya quedó guardada en search/query.txt. ¿Autorizas ejecutar la búsqueda en OpenAlex?`
+- `La query ya quedó guardada en search/<fuente>/query.txt. ¿Autorizas ejecutar la búsqueda en la fuente programática seleccionada?`
 - `La búsqueda ya generó una matriz inicial. ¿Autorizas el cribado preliminar sobre esa misma matriz?`
 - `El cribado sugiere refinar la estrategia. ¿Prefieres ajustar la query o pasar a extracción solo con los casos dudosos?`

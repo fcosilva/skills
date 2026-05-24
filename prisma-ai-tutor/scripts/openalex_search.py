@@ -890,7 +890,11 @@ def country_name(country_code: str) -> str:
 def compute_quality_snapshot(rows: list[dict[str, Any]]) -> dict[str, Any]:
     total = len(rows)
     with_doi = sum(1 for row in rows if row.get("doi"))
-    with_abstract = sum(1 for row in rows if row.get("abstract"))
+    with_abstract = sum(
+        1
+        for row in rows
+        if row.get("abstract") or row.get("abstract_available") is True
+    )
     with_journal = sum(1 for row in rows if row.get("journal"))
     articles = sum(1 for row in rows if row.get("document_type") == "article")
     oa_items = sum(1 for row in rows if row.get("is_oa") is True)
@@ -984,7 +988,7 @@ def build_screening_matrix_table(
                 "",
                 "",
                 "Si/No",
-                "Texto completo/Resumen y metadatos",
+                "Texto completo/Sin texto completo accesible",
                 "",
             ]
         )
@@ -1023,7 +1027,9 @@ def screening_value(key: str, row: dict[str, Any]) -> str:
     if key == "url_openalex":
         return row.get("openalex_url", "")
     if key == "abstract_available":
-        return "Si" if row.get("abstract") else "No"
+        if row.get("abstract") or row.get("abstract_available") is True:
+            return "Si"
+        return "No"
     raise KeyError(f"Unsupported screening column key: {key}")
 
 
@@ -1195,7 +1201,7 @@ def escape_pipe(value: Any) -> str:
 
 
 def search_output_dir(run_dir: Path) -> Path:
-    return run_dir / "search"
+    return run_dir / "search" / "openalex"
 
 
 def screening_output_dir(run_dir: Path) -> Path:

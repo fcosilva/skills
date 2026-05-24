@@ -4,7 +4,7 @@ description: Guía mini revisiones sistemáticas de literatura para estudiantes 
 license: MIT
 metadata:
   author: Francisco Silva-Garcés
-  version: "1.0"
+  version: "1.1"
 ---
 
 # PRISMA-AI Tutor
@@ -29,12 +29,14 @@ Usa este skill cuando el usuario necesite apoyo metodológico para una mini revi
 3. Propón palabras clave, cadenas de búsqueda y criterios.
 4. Guía el cribado por niveles `initial` y `focused`, y luego la selección final o evaluación de elegibilidad.
 5. Usa `título + resumen` sobre todo en `initial` y `focused`; después valida accesibilidad, recupera los archivos fuente y prepara texto legible para revisión del subconjunto priorizado.
-6. Cierra la selección final solo cuando el estudiante o docente confirme humanamente el corpus resultante.
-7. Integra el corpus confirmado en Zotero cuando ya corresponda.
-8. Extrae evidencia verificable desde el texto.
-9. Evalúa calidad metodológica básica.
-10. Ayuda a redactar una síntesis narrativa sin exagerar resultados.
-11. Verifica trazabilidad, límites del curso y declaración de uso de IA.
+6. Pide autorización humana explícita al cerrar Fase 2 antes de ejecutar Fase 3.
+7. Cierra la selección final solo cuando el estudiante o docente confirme humanamente el corpus resultante.
+8. Integra el corpus confirmado en Zotero cuando ya corresponda.
+9. Dentro de la fase Zotero, crea explícitamente las notas hijas mínimas de `screening` antes de dar por cerrada esa fase.
+10. Extrae evidencia verificable desde el texto.
+11. Evalúa calidad metodológica básica.
+12. Ayuda a redactar una síntesis narrativa sin exagerar resultados.
+13. Verifica trazabilidad, límites del curso y declaración de uso de IA.
 
 ## Regla de secuencialidad
 
@@ -50,6 +52,17 @@ Regla operativa para el agente:
 - no ejecutar `initial`, `focused`, `final`, validación de texto completo, descarga local, extracción, evaluación de calidad o integración con Zotero al mismo tiempo;
 - ejecutar una sola fase por vez;
 - confirmar el estado actualizado del caso antes de avanzar.
+- todos los artefactos operativos de una corrida deben escribirse dentro de `outputs/<corrida>/`;
+- el agente no debe crear archivos del caso directamente en `outputs/` raíz;
+- si detecta artefactos del caso en `outputs/` raíz, debe tratarlos como desviación del flujo, corregir la ruta antes de seguir y dejar constancia de la corrección.
+
+Regla adicional para Fase 3 multi-fuente:
+
+- si el caso declara varias fuentes activas para Fase 3, deben ejecutarse en secuencia dentro de la misma fase;
+- el orden recomendado es `openalex -> doaj -> redalyc`;
+- salvo indicación explícita del usuario, la Fase 3 multi-fuente debe activar `openalex`, `doaj` y `redalyc`;
+- la fusión debe ocurrir al cierre de Fase 3, antes de cualquier `initial`;
+- no se debe esperar a `focused` ni a selección final para deduplicar entre fuentes.
 
 ## Regla para decidir cuando toca Zotero
 
@@ -70,6 +83,7 @@ Senales practicas de que si toca Zotero:
 - el caso ya no esta en `initial`, `focused` o `final` pendiente;
 - la ficha del caso o el protocolo ya reflejan confirmacion humana del corpus;
 - el objetivo ya no es seguir cribando sino preservar, organizar y enriquecer el corpus final.
+- el agente puede completar tanto la sincronizacion bibliografica como la nota hija minima de `screening` por cada item.
 
 Senales practicas de que no toca Zotero:
 
@@ -78,6 +92,17 @@ Senales practicas de que no toca Zotero:
 - la seleccion final todavia depende de revisar mas texto completo;
 - la configuracion de Zotero sigue incompleta;
 - el usuario todavia no ha validado el corpus final.
+- la sincronizacion bibliografica termino pero las notas hijas obligatorias de `screening` todavia no fueron creadas.
+
+Regla de cierre de Fase 8:
+
+- la Fase 8 no se considera cerrada solo porque los items ya existan en la libreria o en la coleccion;
+- la Fase 8 se considera cerrada solo cuando se completan ambos pasos, en este orden:
+  - sincronizacion bibliografica del corpus final con Zotero;
+  - creacion o actualizacion de la nota hija minima de `screening` por cada item sincronizado;
+- antes de iniciar Fase 8, el agente debe actualizar en `case.env` las rutas vigentes de `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX` si todavia estan vacias, desactualizadas o apuntan a otra corrida;
+- si el agente ejecuta `prepare_zotero_import.py` o `sync_zotero_mcp.py`, debe verificar despues si corresponde ejecutar tambien `write_zotero_notes.py --phase screening`;
+- el agente no debe asumir que la escritura de notas ocurre implicitamente dentro de `sync_zotero_mcp.py`.
 
 ## Regla para cribado y selección
 
@@ -88,6 +113,7 @@ Senales practicas de que no toca Zotero:
   - ajustes metodologicos relevantes;
   - efecto operativo observado en volumen o pertinencia;
 - antes de pasar de Fase 3 a Fase 4, el agente debe revisar `summary.json` y `search_log.md` para detectar si el volumen estimado supera `max_results` o el umbral operativo;
+- si Fase 3 usa varias fuentes, el agente debe revisar además `merged_summary.json` y `source_merge_log.md` antes de pasar a Fase 4;
 - si `max_results` supera el umbral operativo configurado, el agente debe advertir posible latencia y pedir confirmación o ajuste;
 - si OpenAlex reporta más resultados que `max_results`, el agente no debe asumir que la muestra exportada representa todo el universo recuperado;
 - si el usuario no aprueba trabajar con una muestra acotada, corresponde refinar la query;
@@ -100,11 +126,16 @@ Regla de cierre de refinamiento:
 
 - si la query cambia de forma sustantiva entre corridas, el agente debe actualizar `query.txt` con la version vigente y mantener o crear `query_history.md` para conservar las versiones anteriores y su justificacion;
 - `search_log.md` documenta la corrida vigente, pero no reemplaza el historial de refinamientos.
+- si el caso usa varias fuentes, la Fase 2 debe admitir una `query` por fuente;
+- el agente no debe asumir que una misma sintaxis sirve de forma identica para `OpenAlex`, `DOAJ` y `Redalyc`;
+- puede existir una estrategia conceptual comun, pero debe traducirse y guardarse por separado en cada `search/<fuente>/query.txt`;
+- si las queries por fuente divergen de forma sustantiva, la justificacion debe quedar trazada por fuente en `query_history.md`.
+- al cerrar Fase 2, el agente debe pedir aprobación breve del usuario antes de ejecutar Fase 3.
 
 - `initial`: separar ruido evidente de señal potencial con `título`, `resumen` y metadatos básicos.
 - `focused`: reevaluar solo los `Incluir` y `Dudoso` del `initial`, todavía principalmente con `título + resumen`, pero con mayor exigencia de alineación temática y metodológica.
 - entre `focused` y la selección final: validar accesibilidad, recuperar los archivos fuente y preparar texto legible para revisión cuando sea posible.
-- selección final / evaluación de elegibilidad: cerrar la selección del corpus antes de extracción, idealmente verificando `texto completo` cuando sea posible.
+- selección final / evaluación de elegibilidad: cerrar la selección del corpus antes de extracción, trabajando solo con estudios que sí tengan `texto completo` accesible y legible.
 
 Regla de redacción de artefactos:
 
@@ -150,10 +181,11 @@ Regla critica:
 - no borrar filas;
 - no cambiar `Codigo`, porque esa columna mantiene el vinculo entre la matriz, los archivos de decisiones y la integracion posterior con Zotero.
 
-Regla de contingencia para la selección final:
+Regla de elegibilidad para la selección final:
 
 - si hay `texto completo`, úsalo como base principal de decisión;
-- si no hay `texto completo`, usa la mejor evidencia disponible y marca explícitamente que se trata de una selección final sin texto completo.
+- si no hay `texto completo`, el estudio no debe entrar al corpus final;
+- la falta de `texto completo` puede justificar exclusión o una nueva búsqueda/refinamiento, pero no una inclusión final basada solo en resumen y metadatos.
 
 Regla de cierre para la selección final:
 
@@ -171,13 +203,19 @@ No se recomienda pasar de dos niveles de cribado más una selección final dentr
 - Lee `references/quality-checklist.md` antes de validar un producto final o revisar consistencia metodológica.
 - Usa las plantillas de `assets/` cuando necesites producir matrices o formatos reutilizables.
 - Si el trabajo requiere automatizar la búsqueda abierta en OpenAlex, consulta `guides/openalex-automation.md`.
+- Si el trabajo requiere automatizar búsqueda abierta en DOAJ, consulta `guides/doaj-automation.md`.
+- Si el trabajo requiere automatizar búsqueda regional en Redalyc con API key, consulta `guides/redalyc-automation.md`.
 - Si el trabajo requiere avanzar con pausas y autorización entre etapas, consulta `guides/automation-by-phases.md`.
 
 ## Regla de consulta previa (obligatoria)
 
 Antes de ejecutar **cualquier fase** del flujo automatizado, el agente **DEBE**:
 
-1. Consultar `guides/openalex-automation.md` para identificar el script, los argumentos y los artefactos esperados de esa fase.
+1. Consultar la guía de automatización correspondiente a la fuente activa para identificar el script, los argumentos y los artefactos esperados de esa fase.
+   - `guides/openalex-automation.md` para OpenAlex
+   - `guides/doaj-automation.md` para DOAJ
+   - `guides/redalyc-automation.md` para Redalyc
+   - si el caso declara una Fase 3 multi-fuente, consultar también `guides/automation-by-phases.md`
 2. Usar el script documentado en la guía. **No improvisar** herramientas alternativas si existe un script diseñado para esa tarea.
 3. Si el script requiere acceso a red u otra capacidad restringida por el sandbox, solicita permisos. Si la ejecución sigue bloqueada o falla por restricciones del entorno, entonces propone el comando exacto al usuario para que lo ejecute en su terminal.
 

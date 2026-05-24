@@ -8,7 +8,7 @@
 
 ## Estado general
 
-- Matriz principal: [quality_matrix.md](../quality/quality_matrix.md)
+- Matriz principal esperada: `quality/quality_matrix.md`
 - Estudios evaluados: [[...]]
 - Pendientes de evaluación: [[...]]
 

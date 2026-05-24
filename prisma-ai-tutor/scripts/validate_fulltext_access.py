@@ -17,6 +17,33 @@ DEFAULT_TIMEOUT = 12.0
 DEFAULT_DECISIONS = {"Incluir", "Dudoso"}
 
 
+def is_matrix_data_row(line: str) -> bool:
+    stripped = line.strip()
+    return stripped.startswith("|") and not stripped.startswith("|---")
+
+
+def export_matrix_csv(matrix_markdown_path: Path, csv_path: Path) -> None:
+    lines = matrix_markdown_path.read_text(encoding="utf-8").splitlines()
+    header: list[str] | None = None
+    rows: list[list[str]] = []
+
+    for line in lines:
+        if line.startswith("| Codigo |") or line.startswith("| Código |"):
+            header = [part.strip() for part in line.strip().split("|")[1:-1]]
+            continue
+        if header is None or not is_matrix_data_row(line):
+            continue
+        rows.append([part.strip() for part in line.strip().split("|")[1:-1]])
+
+    if header is None:
+        raise SystemExit(f"Could not parse matrix header from: {matrix_markdown_path}")
+
+    with csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(header)
+        writer.writerows(rows)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -142,7 +169,7 @@ def update_matrix(matrix_path: Path, target_codes: set[str], mailto: str | None,
             updated.append(line)
             continue
 
-        if not line.startswith("| E"):
+        if not is_matrix_data_row(line):
             updated.append(line)
             continue
 
@@ -180,9 +207,12 @@ def main() -> int:
     mailto = args.mailto or os.getenv("OPENALEX_MAILTO")
     target_codes = load_decision_subset(decisions_path)
     changed = update_matrix(matrix_path, target_codes, mailto, args.timeout)
+    csv_path = matrix_path.with_suffix(".csv")
+    export_matrix_csv(matrix_path, csv_path)
     run_dir = matrix_path.parent.parent if matrix_path.parent.name == "screening" else matrix_path.parent
     refresh_run_outputs(run_dir)
     print(f"Updated full-text accessibility for {changed} records in: {matrix_path}")
+    print(f"Updated screening matrix CSV: {csv_path}")
     return 0
 
 

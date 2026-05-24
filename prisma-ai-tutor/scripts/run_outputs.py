@@ -72,12 +72,121 @@ def maybe_link(base_file: Path, target: Path, label: str | None = None) -> str:
     return f"`{target.name}`"
 
 
+def display_path(run_dir: Path, target: Path, fallback: str) -> str:
+    if not target.exists():
+        return fallback
+    return target.as_posix().split(run_dir.as_posix() + "/")[-1]
+
+
 def count_decision(rows: list[dict[str, str]], decision: str) -> int:
     return sum(1 for row in rows if row.get("decision", "").strip() == decision)
 
 
+def is_zotero_screening_notes_complete(run_dir: Path) -> bool:
+    notes_summary_path = first_existing(
+        run_dir / "zotero" / "zotero_notes_summary.json",
+        run_dir / "zotero_notes_summary.json",
+    )
+    notes_actions_path = first_existing(
+        run_dir / "zotero" / "zotero_notes_actions.csv",
+        run_dir / "zotero_notes_actions.csv",
+    )
+    notes_summary = read_json(notes_summary_path) or {}
+    actions = notes_summary.get("actions")
+    if isinstance(actions, list) and any(action.get("phase") == "screening" for action in actions):
+        return True
+    rows = read_csv_rows(notes_actions_path)
+    return any(row.get("phase", "").strip() == "screening" for row in rows)
+
+
+def focused_review_rows(
+    initial_rows: list[dict[str, str]],
+    focused_rows: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    if not initial_rows:
+        return focused_rows
+    eligible_codes = {
+        row.get("code", "").strip()
+        for row in initial_rows
+        if row.get("decision", "").strip() in {"Incluir", "Dudoso"}
+    }
+    return [row for row in focused_rows if row.get("code", "").strip() in eligible_codes]
+
+
+def final_evaluated_rows(final_rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        row
+        for row in final_rows
+        if row.get("criterion", "").strip() != "Hereda exclusion previa"
+    ]
+
+
+def confirmed_final_selection(case_md: Path | None) -> str:
+    if not case_md or not case_md.exists():
+        return "no consta automáticamente"
+    text = case_md.read_text(encoding="utf-8", errors="ignore").casefold()
+    if "confirmacion humana del corpus final: confirmada" in text:
+        return "confirmada"
+    if "confirmación humana del corpus final: confirmada" in text:
+        return "confirmada"
+    return "no consta automáticamente"
+
+
+def final_fulltext_warnings(run_dir: Path, final_rows: list[dict[str, str]]) -> list[str]:
+    download_rows = read_csv_rows(run_dir / "fulltext" / "fulltext_download_log.csv")
+    access_by_code = {
+        row.get("code", "").strip(): row.get("access_kind", "").strip()
+        for row in download_rows
+        if row.get("code", "").strip()
+    }
+    warnings: list[str] = []
+    for row in final_rows:
+        if row.get("decision", "").strip() != "Incluir":
+            continue
+        code = row.get("code", "").strip()
+        access_kind = access_by_code.get(code)
+        if access_kind and access_kind not in {"pdf_fulltext", "html_fulltext"}:
+            warnings.append(
+                f"`{code}` está incluido, pero el log de full text lo marca como `{access_kind}`."
+            )
+    return warnings
+
+
+def estimated_result_count(search_summary: dict[str, Any]) -> Any:
+    per_source = search_summary.get("per_source_counts")
+    if isinstance(per_source, dict) and per_source:
+        total = 0
+        for value in per_source.values():
+            try:
+                total += int(value)
+            except Exception:  # noqa: BLE001
+                return "No reportado"
+        return total
+    for key in ("openalex_meta_count", "scielo_meta_count", "doaj_meta_count", "redalyc_meta_count", "count"):
+        value = search_summary.get(key)
+        if value not in (None, ""):
+            return value
+    return "No reportado"
+
+
+def exported_result_count(search_summary: dict[str, Any]) -> Any:
+    for key in ("exported_results", "merged_results"):
+        value = search_summary.get(key)
+        if value not in (None, ""):
+            return value
+    return "No reportado"
+
+
 def determine_phase_statuses(run_dir: Path) -> dict[str, str]:
-    search_summary = first_existing(run_dir / "search" / "summary.json", run_dir / "summary.json")
+    search_summary = first_existing(
+        run_dir / "search" / "merged_summary.json",
+        run_dir / "search" / "summary.json",
+        run_dir / "search" / "openalex" / "summary.json",
+        run_dir / "search" / "scielo" / "summary.json",
+        run_dir / "search" / "doaj" / "summary.json",
+        run_dir / "search" / "redalyc" / "summary.json",
+        run_dir / "summary.json",
+    )
     initial = first_existing(
         run_dir / "screening" / "screening_decisions_initial.csv",
         run_dir / "screening_decisions_initial.csv",
@@ -130,7 +239,9 @@ def determine_phase_statuses(run_dir: Path) -> dict[str, str]:
             "cerrada" if fulltext_recovery.exists() and fulltext_review.exists() else "pendiente"
         ),
         "Fase 7. Selección final / elegibilidad": "cerrada" if final.exists() else "pendiente",
-        "Fase 8. Zotero": "cerrada" if zotero_sync.exists() else "pendiente",
+        "Fase 8. Zotero": (
+            "cerrada" if zotero_sync.exists() and is_zotero_screening_notes_complete(run_dir) else "pendiente"
+        ),
         "Fase 9. Extracción": "cerrada" if has_meaningful_file(extraction_matrix) else "pendiente",
         "Fase 10. Calidad": "cerrada" if has_meaningful_file(quality_matrix) else "pendiente",
         "Fase 11. Síntesis y auditoría": (
@@ -140,24 +251,24 @@ def determine_phase_statuses(run_dir: Path) -> dict[str, str]:
 
 
 def determine_state(run_dir: Path) -> str:
-    statuses = determine_phase_statuses(run_dir)
-    if statuses["Fase 11. Síntesis y auditoría"] == "cerrada":
+    next_phase = determine_next_phase(run_dir)
+    if next_phase == "Corrida cerrada":
         return "cerrado"
-    if statuses["Fase 10. Calidad"] == "cerrada":
+    if next_phase == "Fase 11. Síntesis y auditoría":
         return "en síntesis"
-    if statuses["Fase 9. Extracción"] == "cerrada":
+    if next_phase == "Fase 10. Calidad":
         return "en calidad"
-    if statuses["Fase 8. Zotero"] == "cerrada":
+    if next_phase == "Fase 9. Extracción":
         return "en extracción"
-    if statuses["Fase 7. Selección final / elegibilidad"] == "cerrada":
+    if next_phase == "Fase 8. Zotero":
         return "en Zotero"
-    if statuses["Fase 6. Accesibilidad y full text"] == "cerrada":
+    if next_phase == "Fase 7. Selección final / elegibilidad":
         return "en selección final"
-    if statuses["Fase 5. Cribado focused"] == "cerrada":
+    if next_phase == "Fase 6. Accesibilidad y full text":
         return "en full text"
-    if statuses["Fase 4. Cribado inicial"] == "cerrada":
+    if next_phase == "Fase 5. Cribado focused":
         return "en cribado focused"
-    if statuses["Fase 3. Búsqueda"] == "cerrada":
+    if next_phase == "Fase 4. Cribado inicial":
         return "en cribado"
     return "en preparación"
 
@@ -170,8 +281,27 @@ def determine_next_phase(run_dir: Path) -> str:
     return "Corrida cerrada"
 
 
+def last_contiguous_closed_phase(phase_statuses: dict[str, str]) -> str:
+    last = "ninguna"
+    for phase, status in phase_statuses.items():
+        if status != "cerrada":
+            break
+        last = phase
+    return last
+
+
 def find_case_context(run_dir: Path) -> tuple[str, Path | None, Path | None]:
-    summary = read_json(first_existing(run_dir / "search" / "summary.json", run_dir / "summary.json")) or {}
+    summary = read_json(
+        first_existing(
+            run_dir / "search" / "merged_summary.json",
+            run_dir / "search" / "summary.json",
+            run_dir / "search" / "openalex" / "summary.json",
+            run_dir / "search" / "scielo" / "summary.json",
+            run_dir / "search" / "doaj" / "summary.json",
+            run_dir / "search" / "redalyc" / "summary.json",
+            run_dir / "summary.json",
+        )
+    ) or {}
     config_file_raw = summary.get("config_file")
     if config_file_raw:
         config_file = Path(config_file_raw)
@@ -192,10 +322,40 @@ def build_run_overview(run_dir: Path) -> str:
     quality_dir = run_dir / "quality"
     synthesis_dir = run_dir / "synthesis"
 
-    search_summary_path = first_existing(search_dir / "summary.json", run_dir / "summary.json")
-    query_path = first_existing(search_dir / "query.txt", run_dir / "query.txt")
-    query_history_path = first_existing(search_dir / "query_history.md", run_dir / "query_history.md")
-    search_log_path = first_existing(search_dir / "search_log.md", run_dir / "search_log.md")
+    search_summary_path = first_existing(
+        search_dir / "merged_summary.json",
+        search_dir / "summary.json",
+        search_dir / "openalex" / "summary.json",
+        search_dir / "scielo" / "summary.json",
+        search_dir / "doaj" / "summary.json",
+        search_dir / "redalyc" / "summary.json",
+        run_dir / "summary.json",
+    )
+    query_path = first_existing(
+        search_dir / "query.txt",
+        search_dir / "openalex" / "query.txt",
+        search_dir / "scielo" / "query.txt",
+        search_dir / "doaj" / "query.txt",
+        search_dir / "redalyc" / "query.txt",
+        run_dir / "query.txt",
+    )
+    query_history_path = first_existing(
+        search_dir / "query_history.md",
+        search_dir / "openalex" / "query_history.md",
+        search_dir / "scielo" / "query_history.md",
+        search_dir / "doaj" / "query_history.md",
+        search_dir / "redalyc" / "query_history.md",
+        run_dir / "query_history.md",
+    )
+    search_log_path = first_existing(
+        search_dir / "source_merge_log.md",
+        search_dir / "search_log.md",
+        search_dir / "openalex" / "search_log.md",
+        search_dir / "scielo" / "search_log.md",
+        search_dir / "doaj" / "search_log.md",
+        search_dir / "redalyc" / "search_log.md",
+        run_dir / "search_log.md",
+    )
     screening_matrix_path = first_existing(screening_dir / "screening_matrix.md", run_dir / "screening_matrix.md")
     initial_summary_path = first_existing(
         screening_dir / "screening_summary_initial.md",
@@ -240,9 +400,12 @@ def build_run_overview(run_dir: Path) -> str:
     case_name, case_md, protocol_md = find_case_context(run_dir)
     phase_statuses = determine_phase_statuses(run_dir)
 
-    final_basis_counter = Counter(row.get("final_basis", "").strip() for row in final_rows)
-    closed_phases = [phase for phase, status in phase_statuses.items() if status == "cerrada"]
-    last_phase_closed = closed_phases[-1] if closed_phases else "ninguna"
+    focused_rows_evaluated = focused_review_rows(initial_rows, focused_rows)
+    final_rows_evaluated = final_evaluated_rows(final_rows)
+    final_basis_counter = Counter(row.get("final_basis", "").strip() for row in final_rows_evaluated)
+    final_criterion_counter = Counter(row.get("criterion", "").strip() for row in final_rows_evaluated)
+    last_phase_closed = last_contiguous_closed_phase(phase_statuses)
+    consistency_warnings = final_fulltext_warnings(run_dir, final_rows)
 
     lines = [
         "# Índice de corrida",
@@ -286,24 +449,35 @@ def build_run_overview(run_dir: Path) -> str:
             "",
             "## Resumen ejecutivo de la corrida",
             "",
-            f"- Query vigente: {maybe_link(overview_path, query_path, query_path.as_posix().split(run_dir.as_posix() + '/')[-1] if query_path.exists() else 'search/query.txt')}",
-            f"- Historial de refinamiento: {maybe_link(overview_path, query_history_path, query_history_path.as_posix().split(run_dir.as_posix() + '/')[-1] if query_history_path.exists() else 'search/query_history.md')}",
+            f"- Query vigente: {maybe_link(overview_path, query_path, display_path(run_dir, query_path, 'search/<fuente>/query.txt'))}",
+            f"- Historial de refinamiento: {maybe_link(overview_path, query_history_path, display_path(run_dir, query_history_path, 'search/<fuente>/query_history.md'))}",
             f"- Última fase cerrada: `{last_phase_closed}`",
             f"- Próxima fase sugerida: `{determine_next_phase(run_dir)}`",
-            f"- Resultados estimados por la fuente: `{search_summary.get('openalex_meta_count', 'No reportado')}`",
-            f"- Resultados exportados para cribado: `{search_summary.get('exported_results', 'No reportado')}`",
+            f"- Resultados estimados por la fuente: `{estimated_result_count(search_summary)}`",
+            f"- Resultados exportados para cribado: `{exported_result_count(search_summary)}`",
             f"- Incluidos en `initial`: `{count_decision(initial_rows, 'Incluir')}`",
-            f"- Incluidos en `focused`: `{count_decision(focused_rows, 'Incluir')}`",
-            f"- Selección final confirmada: `no consta automáticamente`",
+            f"- Incluidos en `focused`: `{count_decision(focused_rows_evaluated, 'Incluir')}`",
+            f"- Selección final confirmada: `{confirmed_final_selection(case_md)}`",
             f"- Estudios con `Texto completo`: `{final_basis_counter.get('Texto completo', 0)}`",
-            f"- Estudios con `Resumen y metadatos`: `{final_basis_counter.get('Resumen y metadatos', 0)}`",
+            f"- Estudios excluidos por falta de `Texto completo`: `{final_criterion_counter.get('Sin texto completo util para seleccion final', 0)}`",
+            "",
+            "## Alertas de consistencia",
+            "",
+        ]
+    )
+    if consistency_warnings:
+        lines.extend([f"- {warning}" for warning in consistency_warnings])
+    else:
+        lines.append("- Sin alertas automáticas.")
+    lines.extend(
+        [
             "",
             "## Artefactos clave por fase",
             "",
             "### Fase 3. Búsqueda",
             "",
-            f"- {maybe_link(overview_path, search_log_path, 'search/search_log.md')}",
-            f"- {maybe_link(overview_path, search_summary_path, 'search/summary.json')}",
+            f"- {maybe_link(overview_path, search_log_path, display_path(run_dir, search_log_path, 'search/<fuente>/search_log.md'))}",
+            f"- {maybe_link(overview_path, search_summary_path, display_path(run_dir, search_summary_path, 'search/<fuente>/summary.json'))}",
             f"- {maybe_link(overview_path, screening_matrix_path, 'screening/screening_matrix.md')}",
             "",
             "### Fases 4-5. Cribado",
@@ -341,7 +515,12 @@ def build_screening_trace(run_dir: Path) -> str:
     initial_rows = read_csv_rows(first_existing(run_dir / "screening" / "screening_decisions_initial.csv", run_dir / "screening_decisions_initial.csv"))
     focused_rows = read_csv_rows(first_existing(run_dir / "screening" / "screening_decisions_focused.csv", run_dir / "screening_decisions_focused.csv"))
     final_rows = read_csv_rows(first_existing(run_dir / "screening" / "screening_decisions_final.csv", run_dir / "screening_decisions_final.csv"))
-    final_basis_counter = Counter(row.get("final_basis", "").strip() for row in final_rows)
+    focused_rows_evaluated = focused_review_rows(initial_rows, focused_rows)
+    preserved_initial_excluded = max(len(focused_rows) - len(focused_rows_evaluated), 0)
+    final_rows_evaluated = final_evaluated_rows(final_rows)
+    final_basis_counter = Counter(row.get("final_basis", "").strip() for row in final_rows_evaluated)
+    final_criterion_counter = Counter(row.get("criterion", "").strip() for row in final_rows_evaluated)
+    inherited_final_excluded = len(final_rows) - len(final_rows_evaluated)
     lines = [
         "# Trazabilidad de cribado y selección final",
         "",
@@ -354,15 +533,18 @@ def build_screening_trace(run_dir: Path) -> str:
         "",
         "## Paso 2. Cribado focused",
         "",
-        f"- Subconjunto revisado: `{len(focused_rows)}`",
-        f"- `Incluir`: `{count_decision(focused_rows, 'Incluir')}`",
-        f"- `Dudoso`: `{count_decision(focused_rows, 'Dudoso')}`",
-        f"- `Excluir`: `{count_decision(focused_rows, 'Excluir')}`",
+        f"- Subconjunto reevaluado: `{len(focused_rows_evaluated)}`",
+        f"- Filas preservadas como exclusión previa: `{preserved_initial_excluded}`",
+        f"- `Incluir`: `{count_decision(focused_rows_evaluated, 'Incluir')}`",
+        f"- `Dudoso`: `{count_decision(focused_rows_evaluated, 'Dudoso')}`",
+        f"- `Excluir`: `{count_decision(focused_rows_evaluated, 'Excluir')}`",
         "",
         "## Paso 3. Selección final / elegibilidad",
         "",
+        f"- Subconjunto evaluado en selección final: `{len(final_rows_evaluated)}`",
+        f"- Registros preservados como exclusión previa: `{inherited_final_excluded}`",
         f"- Estudios evaluados con base `Texto completo`: `{final_basis_counter.get('Texto completo', 0)}`",
-        f"- Estudios excluidos por falta de `Texto completo`: `{final_basis_counter.get('Sin texto completo accesible', 0)}`",
+        f"- Estudios excluidos por falta de `Texto completo`: `{final_criterion_counter.get('Sin texto completo util para seleccion final', 0)}`",
         f"- Estudios incluidos en corpus final: `{count_decision(final_rows, 'Incluir')}`",
         f"- Dudosos remanentes: `{count_decision(final_rows, 'Dudoso')}`",
         f"- Estudios excluidos en selección final: `{count_decision(final_rows, 'Excluir')}`",

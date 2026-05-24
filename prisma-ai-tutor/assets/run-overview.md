@@ -33,8 +33,8 @@ Abre los artefactos en este orden:
 
 ## Resumen ejecutivo de la corrida
 
-- Query vigente: [search/query.txt](../search/query.txt)
-- Historial de refinamiento: [search/query_history.md](../search/query_history.md)
+- Query vigente esperada: `search/<fuente>/query.txt`
+- Historial de refinamiento esperado: `search/<fuente>/query_history.md`
 - Última fase cerrada: [[...]]
 - Próxima fase sugerida: [[...]]
 - Observación breve: [[...]]
@@ -47,41 +47,41 @@ Abre los artefactos en este orden:
 - Incluidos en `focused`: [[...]]
 - Selección final confirmada: [[...]]
 - Estudios con `Texto completo`: [[...]]
-- Estudios con `Resumen y metadatos`: [[...]]
+- Estudios excluidos por falta de `Texto completo`: [[...]]
 
 ## Artefactos clave por fase
 
 ### Fase 3. Búsqueda
 
-- [search/search_log.md](../search/search_log.md)
-- [search/summary.json](../search/summary.json)
-- [screening/screening_matrix.md](../screening/screening_matrix.md)
+- `search/<fuente>/search_log.md`
+- `search/<fuente>/summary.json`
+- `screening/screening_matrix.md`
 
 ### Fases 4-5. Cribado
 
-- [screening/screening_summary_initial.md](../screening/screening_summary_initial.md)
-- [screening/screening_summary_focused.md](../screening/screening_summary_focused.md)
-- [screening/screening_trace.md](../screening/screening_trace.md)
+- `screening/screening_summary_initial.md`
+- `screening/screening_summary_focused.md`
+- `screening/screening_trace.md`
 
 ### Fase 6. Full text
 
-- [fulltext/fulltext_recovery_summary.md](../fulltext/fulltext_recovery_summary.md)
-- [fulltext/fulltext_review_text_summary.md](../fulltext/fulltext_review_text_summary.md)
+- `fulltext/fulltext_recovery_summary.md`
+- `fulltext/fulltext_review_text_summary.md`
 
 ### Fase 7. Selección final
 
-- [screening/screening_summary_final.md](../screening/screening_summary_final.md)
+- `screening/screening_summary_final.md`
 
 ### Fases 8-10
 
-- [zotero/zotero_summary.md](../zotero/zotero_summary.md)
-- [extraction/extraction_summary.md](../extraction/extraction_summary.md)
-- [quality/quality_summary.md](../quality/quality_summary.md)
+- `zotero/zotero_summary.md`
+- `extraction/extraction_summary.md`
+- `quality/quality_summary.md`
 
 ### Fase 11
 
-- [synthesis/narrative_synthesis.md](../synthesis/narrative_synthesis.md)
-- [synthesis/final_audit.md](../synthesis/final_audit.md)
+- `synthesis/narrative_synthesis.md`
+- `synthesis/final_audit.md`
 
 ## Decisiones y autorizaciones relevantes
 

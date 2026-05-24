@@ -12,7 +12,7 @@
 - `Incluir`: [[...]]
 - `Dudoso`: [[...]]
 - `Excluir`: [[...]]
-- Resumen principal: [screening_summary_initial.md](../screening/screening_summary_initial.md)
+- Resumen principal esperado: `screening/screening_summary_initial.md`
 - Observación metodológica: [[...]]
 
 ## Paso 2. Cribado focused
@@ -21,7 +21,7 @@
 - `Incluir`: [[...]]
 - `Dudoso`: [[...]]
 - `Excluir`: [[...]]
-- Resumen principal: [screening_summary_focused.md](../screening/screening_summary_focused.md)
+- Resumen principal esperado: `screening/screening_summary_focused.md`
 - Observación metodológica: [[...]]
 
 ## Paso 3. Revisión humana intermedia
@@ -34,9 +34,9 @@
 ## Paso 4. Selección final / elegibilidad
 
 - Estudios con base `Texto completo`: [[...]]
-- Estudios con base `Resumen y metadatos`: [[...]]
+- Estudios excluidos por falta de `Texto completo`: [[...]]
 - Selección final confirmada: [[sí / no]]
-- Resumen principal: [screening_summary_final.md](../screening/screening_summary_final.md)
+- Resumen principal esperado: `screening/screening_summary_final.md`
 - Observación metodológica: [[...]]
 
 ## Regla de interpretación

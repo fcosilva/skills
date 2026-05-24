@@ -119,14 +119,14 @@ Niveles sugeridos de cribado:
 - `initial`: primer filtro por título, resumen y metadatos básicos.
 - `focused`: segundo filtro sobre los casos `Incluir` y `Dudoso`, todavía basado sobre todo en resumen, pero con mayor exigencia de alineación temática y metodológica.
 - después de `focused`: validación operativa de accesibilidad y recuperación local del texto completo para el subconjunto priorizado.
-- `final`: selección final antes de la extracción, idealmente verificando texto completo cuando sea posible.
+- `final`: selección final antes de la extracción, trabajando solo con estudios que tengan texto completo verificable.
 
 Regla práctica:
 
 - `initial` y `focused` pueden resolverse principalmente con título y abstract;
 - en la redacción de artefactos, `initial` debe describirse como fase basada en `título + resumen + metadatos básicos`, no como una fase de `título + metadatos` solamente;
-- `final` debería apoyarse ya en texto completo recuperado localmente o en evidencia ampliada suficiente para confirmar elegibilidad.
-- si el texto completo no está disponible, la decisión final puede apoyarse en resumen y metadatos, pero debe quedar explícita esa limitación.
+- `final` debe apoyarse en texto completo recuperado localmente o en texto completo HTML legible preparado para revisión.
+- si el texto completo no está disponible, el estudio no debe entrar al corpus final; corresponde excluirlo por falta de texto completo o recuperar el documento antes de cerrar la selección.
 
 En la matriz de cribado conviene registrar además:
 
@@ -138,7 +138,7 @@ En la matriz de cribado conviene registrar además:
 
 Entrada:
 
-- Texto completo, resumen ampliado o fragmento verificable.
+- Texto completo legible de los estudios incluidos en el corpus final.
 
 Extrae solo:
 

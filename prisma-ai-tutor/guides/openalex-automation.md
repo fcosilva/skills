@@ -106,13 +106,13 @@ Scripts relacionados:
 
 El script exporta:
 
-- `search/query.txt`
-- `search/query_history.md` cuando la estrategia del caso haya sido refinada entre corridas
-- `search/raw_results.json`
-- `search/normalized_results.json`
-- `search/normalized_results.csv`
-- `search/search_log.md`
-- `search/summary.json`
+- `search/openalex/query.txt`
+- `search/openalex/query_history.md` cuando la estrategia del caso haya sido refinada entre corridas
+- `search/openalex/raw_results.json`
+- `search/openalex/normalized_results.json`
+- `search/openalex/normalized_results.csv`
+- `search/openalex/search_log.md`
+- `search/openalex/summary.json`
 - `screening/screening_matrix.md`
 - `screening/screening_matrix.csv`
 
@@ -124,7 +124,7 @@ Además, `search_log.md` y `summary.json` registran:
 
 Regla de trazabilidad del query:
 
-- `query.txt` conserva la version vigente ejecutada en la corrida actual;
+- `search/openalex/query.txt` conserva la version vigente ejecutada en la corrida actual;
 - cuando el caso refine la estrategia de busqueda de forma sustantiva, corresponde crear o actualizar `query_history.md` en el mismo directorio de salida;
 - `query_history.md` debe conservar al menos:
   - la version inicial;
@@ -291,7 +291,7 @@ Recomendación metodológica:
 
 - no confundir una `landing_metadata_only` con un `full text` útil;
 - el `final` del apoyo automatizado debería usar primero los textos preparados desde `pdf_fulltext` o `html_fulltext`;
-- cuando no se pueda recuperar el documento, la base debe quedar como `Resumen y metadatos`.
+- cuando no se pueda recuperar el documento, el estudio no debe entrar al corpus final.
 - para sitios con challenge como Cloudflare, la recuperación automática puede requerir cookies exportadas de una sesión del navegador que ya haya pasado el desafío.
 
 Además genera un resumen rápido de calidad del conjunto con datos como:
@@ -303,12 +303,12 @@ Además genera un resumen rápido de calidad del conjunto con datos como:
 - distribución de idiomas;
 - distribución de tipos documentales.
 
-La query efectiva queda persistida en `search/query.txt` dentro del directorio de salida, para que pueda revisarse, corregirse y reutilizarse en la siguiente fase.
+La query efectiva queda persistida en `search/openalex/query.txt` dentro del directorio de salida, para que pueda revisarse, corregirse y reutilizarse en la siguiente fase.
 
 Nota de uso:
 
 - el script permite recibir la query directamente o desde `--query-file`;
-- sin embargo, dentro del flujo formal de `PRISMA-AI Tutor` se recomienda tratar `query.txt` como artefacto obligatorio de la fase de búsqueda.
+- sin embargo, dentro del flujo formal de `PRISMA-AI Tutor` se recomienda tratar `search/openalex/query.txt` como artefacto obligatorio de la fase de búsqueda.
 - el script puede funcionar sin archivo de configuración, pero dentro del flujo formal de `PRISMA-AI Tutor` se fuerza el uso de un archivo `.env` en la Fase 3.
 
 ## Script disponible
@@ -388,7 +388,7 @@ python3 skills/prisma-ai-tutor/scripts/openalex_search.py \
 ```env
 PRISMA_AI_TUTOR_BASE_CONFIG=../../config/prisma-ai-tutor/base.env
 PRISMA_AI_TUTOR_WORKSPACE_ROOT=../..
-OPENALEX_QUERY_FILE=outputs/mi-corrida/search/query.txt
+OPENALEX_QUERY_FILE=outputs/mi-corrida/search/openalex/query.txt
 OPENALEX_OUT_DIR=outputs/mi-corrida
 ZOTERO_ATTACHMENTS_DIR=cases/mi-caso/fulltext
 ZOTERO_SCREENING_DECISIONS=outputs/mi-corrida/screening/screening_decisions_final.csv
