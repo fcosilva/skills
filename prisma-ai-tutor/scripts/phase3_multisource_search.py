@@ -18,11 +18,18 @@ DEFAULT_SOURCE_ORDER = ["openalex", "doaj", "redalyc"]
 SOURCE_TO_SCRIPT = {
     "openalex": SCRIPT_DIR / "openalex_search.py",
     "doaj": SCRIPT_DIR / "doaj_search.py",
+    "pubmed": SCRIPT_DIR / "pubmed_search.py",
+    "scopus": SCRIPT_DIR / "scopus_search.py",
     "redalyc": SCRIPT_DIR / "redalyc_search.py",
+}
+SOURCE_MODE_SCRIPT = {
+    ("scopus", "manual_csv"): SCRIPT_DIR / "scopus_import_csv.py",
 }
 SOURCE_OUT_DIR_KEYS = {
     "openalex": ("OPENALEX_OUT_DIR", "outputs/openalex-search"),
     "doaj": ("DOAJ_OUT_DIR", "outputs/doaj-search"),
+    "pubmed": ("PUBMED_OUT_DIR", "outputs/pubmed-search"),
+    "scopus": ("SCOPUS_OUT_DIR", "outputs/scopus-search"),
     "redalyc": ("REDALYC_OUT_DIR", "outputs/redalyc-search"),
 }
 PHASE3_SOURCES_KEY = "PRISMA_PHASE3_SOURCES"
@@ -54,7 +61,7 @@ def parse_args() -> Phase3Config:
         dest="sources",
         help=(
             "Source to execute in phase 3. Repeat to keep a specific order. "
-            "Supported: openalex, doaj, redalyc."
+            "Supported: openalex, doaj, pubmed, scopus, redalyc."
         ),
     )
     parser.add_argument(
@@ -81,7 +88,7 @@ def parse_args() -> Phase3Config:
     if invalid:
         raise ValueError(
             f"Unsupported phase 3 sources: {', '.join(invalid)}. "
-            f"Expected only: {', '.join(DEFAULT_SOURCE_ORDER)}."
+            f"Expected only: {', '.join(sorted(SOURCE_TO_SCRIPT))}."
         )
 
     merge_after_search = resolve_bool_flag(
@@ -135,7 +142,9 @@ def resolve_common_run_dir(sources: list[str], env_config: dict[str, str], confi
 
 
 def run_source_script(source: str, config: Phase3Config) -> dict[str, str]:
-    script = SOURCE_TO_SCRIPT[source]
+    env_config = load_env_config(config.config_file)
+    mode = env_config.get(f"{source.upper()}_MODE", "api").strip().lower()
+    script = SOURCE_MODE_SCRIPT.get((source, mode), SOURCE_TO_SCRIPT[source])
     command = [sys.executable, str(script)]
     if config.config_file:
         command.extend(["--config-file", str(config.config_file)])

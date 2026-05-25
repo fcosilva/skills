@@ -24,7 +24,8 @@ Nota de navegación:
 ## Fuentes de información
 
 - OpenAlex, DOAJ, Redalyc
-- Scopus, WoS, Dimensions
+- Scopus si existe acceso institucional o CSV exportado
+- PubMed si el tema tiene pertinencia biomédica o de salud
 - SciELO, Redalyc 
 
 ## Configuración técnica de búsqueda

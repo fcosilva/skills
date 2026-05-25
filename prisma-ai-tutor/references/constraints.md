@@ -17,7 +17,7 @@ El estudiante debe usar al menos las siguientes fuentes:
 
 Fuentes complementarias u opcionales:
 
-- `Web of Science` puede sustituir a `Scopus` si existe autorización docente o disponibilidad institucional.
+- `Web of Science` solo debería considerarse si ya existe acceso institucional claro; no forma parte del flujo operativo recomendado.
 - `Dimensions` puede usarse como fuente complementaria, pero no reemplaza por sí sola la combinación abierta + comercial + regional.
 - Si una fuente comercial no está disponible institucionalmente, el docente puede autorizar una sustitución documentada.
 

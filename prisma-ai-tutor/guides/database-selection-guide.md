@@ -20,7 +20,7 @@ Para esta asignatura se recomienda exigir:
 
 Opcionales:
 
-- `Web of Science` como sustituto o validación de la fuente comercial.
+- `Web of Science` solo como alternativa institucional si ya existe acceso; no forma parte del flujo operativo recomendado del skill.
 - `Dimensions` como fuente complementaria avanzada.
 
 ## Tabla comparativa general
@@ -29,7 +29,7 @@ Opcionales:
 |---|---|---|---|---|---|
 | OpenAlex | Abierta | API abierta | `240M+` works en la documentación técnica; `474M+` a `477M+` scholarly works en la ayuda institucional | Artículos, libros, datasets, tesis y otros trabajos académicos | Reproducibilidad, automatización y acceso abierto |
 | Scopus | Comercial | Suscripción y APIs oficiales | `100M+` records | Revistas, preprints, libros y actas de conferencias | Curación fuerte y prestigio académico |
-| Web of Science Core Collection | Comercial | Suscripción y APIs oficiales | `97M+` records conectados; la plataforma completa reporta `271M+` records | Revistas arbitradas, proceedings y libros académicos | Alta confianza editorial y validación de calidad |
+| Web of Science Core Collection | Comercial | Suscripción y APIs oficiales | `97M+` records conectados; la plataforma completa reporta `271M+` records | Revistas arbitradas, proceedings y libros académicos | Alta confianza editorial, pero acceso operativo restringido |
 | Dimensions | Comercial / institucional | Plataforma y API bajo licencia; versión gratuita limitada | `140M+` publications en la versión gratuita; otras páginas del proveedor reportan `160M+` global publications | Publicaciones, datasets, grants, patents, policy y más | Vista conectada del ecosistema de investigación |
 | SciELO | Regional | Acceso web abierto | La cobertura varía por colección y no se presenta como un solo conteo global estable en una página oficial equivalente | Revistas científicas iberoamericanas y regionales | Visibilidad regional, español y portugués |
 | Redalyc | Regional | Acceso web abierto | La cobertura varía por portal y colección; no encontré un conteo global oficial único comparable | Revistas científicas iberoamericanas y regionales | Cobertura latinoamericana y pertinencia contextual |
@@ -40,7 +40,7 @@ Opcionales:
 |---|---|---|---|
 | OpenAlex | Abierta, automatizable, transparente y reproducible | Metadatos heterogéneos según la fuente de origen | Obligatoria como base abierta |
 | Scopus | Curación fuerte, prestigio, buena cobertura interdisciplinaria | Acceso restringido por licencia | Obligatoria como base comercial si hay acceso |
-| Web of Science | Selección editorial muy exigente, buena trazabilidad | Acceso restringido; puede ser menos accesible operativamente | Sustituto o validación de Scopus |
+| Web of Science | Selección editorial muy exigente, buena trazabilidad | Acceso restringido incluso para búsqueda web; menor viabilidad en aula sin suscripción | No recomendado para el flujo por defecto; usar solo si la institución ya ofrece acceso |
 | Dimensions | Gran riqueza contextual, enlaces con grants y patents, full-text indexing en gran parte de la base | Menor replicabilidad en aula si no todos tienen acceso | Complementaria, no obligatoria |
 | SciELO | Acceso abierto, fuerte presencia regional, útil para literatura en español y portugués | Menor homogeneidad global que las bases comerciales | Obligatoria como opción regional |
 | Redalyc | Acceso abierto, foco iberoamericano, valor regional alto | Menor claridad en automatización y métricas globales | Obligatoria como opción regional |
@@ -79,7 +79,7 @@ Se recomienda porque aporta:
 - cobertura amplia de revistas, libros y conferencias;
 - una referencia estándar en muchos trabajos académicos.
 
-`Web of Science` puede cumplir una función equivalente si es la base más disponible en la institución.
+`Web of Science` puede cumplir una función equivalente solo si ya existe acceso institucional claro. Si no hay acceso, no conviene incluirlo en el flujo operativo.
 
 ## 3. Fuente regional: SciELO o Redalyc
 
@@ -98,12 +98,12 @@ Para el uso real del skill conviene distinguir entre valor metodológico y madur
 - `Redalyc` sí expone una API documentada y requiere `API key` para las búsquedas;
 - en pruebas reales con clave válida, `Redalyc` ya devolvió registros JSON con `título`, `autores`, `dc_description` como resumen cuando está disponible, `año`, `tipo documental`, `idioma`, `fuente` y referencia al `PDF`;
 - la API documentada no expone un filtro directo por resumen, así que su recuperación se parece más a `title + filtros metadata` que a una búsqueda simétrica por `título + abstract`;
-- por eso, en el estado actual del skill, `OpenAlex` y `DOAJ` siguen siendo las fuentes abiertas activas, `SciELO` permanece como fuente regional semiasistida, y `Redalyc` pasa a ser una fuente regional técnicamente prometedora, pendiente solo de formalizar su integración en el flujo normal.
+- por eso, en el estado actual del skill, `OpenAlex` y `DOAJ` son fuentes abiertas activas, `Redalyc` es la fuente regional programática activa cuando hay API key, y `SciELO` permanece como fuente regional semiasistida o experimental.
 
 Implicación pedagógica:
 
 - si el objetivo principal del trabajo es comparar cobertura regional como fenómeno metodológico, `SciELO` y `Redalyc` siguen siendo relevantes aunque su automatización sea parcial;
-- si el objetivo principal es ejecutar una corrida reproducible y automatizable con baja fricción, hoy conviene apoyarse primero en `OpenAlex` y `DOAJ`.
+- si el objetivo principal es ejecutar una corrida reproducible y automatizable con baja fricción, hoy conviene apoyarse primero en `OpenAlex`, `DOAJ` y `Redalyc` cuando haya API key.
 
 ## Nota sobre cifras de cobertura
 
@@ -123,7 +123,6 @@ Por eso, estas cifras deben leerse como una referencia comparativa general, no c
 - OpenAlex about us: https://help.openalex.org/hc/en-us/articles/24396686889751-About-us
 - Scopus product page: https://www.elsevier.com/products/scopus
 - Scopus content page: https://www.elsevier.com/en-gb/products/scopus/content
-- Web of Science Core Collection: https://clarivate.com/products/scientific-and-academic-research/research-discovery-and-workflow-solutions/webofscience-platform/web-of-science-core-collection/
 - Dimensions free version: https://www.dimensions.ai/products/all-products/dimensions-free-version/
 - Dimensions analytics: https://www.dimensions.ai/products/all-products/dimensions-analytics/
 - Dimensions homepage: https://www.dimensions.ai/

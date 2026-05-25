@@ -162,7 +162,15 @@ def estimated_result_count(search_summary: dict[str, Any]) -> Any:
             except Exception:  # noqa: BLE001
                 return "No reportado"
         return total
-    for key in ("openalex_meta_count", "scielo_meta_count", "doaj_meta_count", "redalyc_meta_count", "count"):
+    for key in (
+        "openalex_meta_count",
+        "scielo_meta_count",
+        "doaj_meta_count",
+        "pubmed_meta_count",
+        "scopus_meta_count",
+        "redalyc_meta_count",
+        "count",
+    ):
         value = search_summary.get(key)
         if value not in (None, ""):
             return value
@@ -184,6 +192,8 @@ def determine_phase_statuses(run_dir: Path) -> dict[str, str]:
         run_dir / "search" / "openalex" / "summary.json",
         run_dir / "search" / "scielo" / "summary.json",
         run_dir / "search" / "doaj" / "summary.json",
+        run_dir / "search" / "pubmed" / "summary.json",
+        run_dir / "search" / "scopus" / "summary.json",
         run_dir / "search" / "redalyc" / "summary.json",
         run_dir / "summary.json",
     )
@@ -298,6 +308,8 @@ def find_case_context(run_dir: Path) -> tuple[str, Path | None, Path | None]:
             run_dir / "search" / "openalex" / "summary.json",
             run_dir / "search" / "scielo" / "summary.json",
             run_dir / "search" / "doaj" / "summary.json",
+            run_dir / "search" / "pubmed" / "summary.json",
+            run_dir / "search" / "scopus" / "summary.json",
             run_dir / "search" / "redalyc" / "summary.json",
             run_dir / "summary.json",
         )
@@ -328,6 +340,8 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "openalex" / "summary.json",
         search_dir / "scielo" / "summary.json",
         search_dir / "doaj" / "summary.json",
+        search_dir / "pubmed" / "summary.json",
+        search_dir / "scopus" / "summary.json",
         search_dir / "redalyc" / "summary.json",
         run_dir / "summary.json",
     )
@@ -336,6 +350,8 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "openalex" / "query.txt",
         search_dir / "scielo" / "query.txt",
         search_dir / "doaj" / "query.txt",
+        search_dir / "pubmed" / "query.txt",
+        search_dir / "scopus" / "query.txt",
         search_dir / "redalyc" / "query.txt",
         run_dir / "query.txt",
     )
@@ -344,6 +360,8 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "openalex" / "query_history.md",
         search_dir / "scielo" / "query_history.md",
         search_dir / "doaj" / "query_history.md",
+        search_dir / "pubmed" / "query_history.md",
+        search_dir / "scopus" / "query_history.md",
         search_dir / "redalyc" / "query_history.md",
         run_dir / "query_history.md",
     )
@@ -353,6 +371,8 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "openalex" / "search_log.md",
         search_dir / "scielo" / "search_log.md",
         search_dir / "doaj" / "search_log.md",
+        search_dir / "pubmed" / "search_log.md",
+        search_dir / "scopus" / "search_log.md",
         search_dir / "redalyc" / "search_log.md",
         run_dir / "search_log.md",
     )

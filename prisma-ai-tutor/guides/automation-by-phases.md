@@ -106,11 +106,13 @@ Acción:
 Modo multi-fuente recomendado:
 
 - si el caso activa más de una fuente, Fase 2 debe producir una `query` por fuente;
-- no asumas que la sintaxis exacta puede reutilizarse sin cambios entre `OpenAlex`, `DOAJ` y `Redalyc`;
+- no asumas que la sintaxis exacta puede reutilizarse sin cambios entre `OpenAlex`, `DOAJ`, `PubMed`, `Scopus` y `Redalyc`;
 - parte de una estrategia conceptual comun, pero traduce cada version al comportamiento real de la fuente;
 - deja visible la version aprobada en:
   - `search/openalex/query.txt`
   - `search/doaj/query.txt`
+  - `search/pubmed/query.txt` si el tema tiene pertinencia biomédica o de salud
+  - `search/scopus/query.txt` si el caso incorpora Scopus
   - `search/redalyc/query.txt`
 - si una fuente necesita una version mas simple, mas corta o con distinto campo de búsqueda, registra esa decision metodologica en su propio `query_history.md`.
 
@@ -123,6 +125,9 @@ Reglas operativas:
 - en `Redalyc`, `subject` representa disciplina o descriptores tematicos, no resumen; no lo trates como reemplazo de `abstract`;
 - en `DOAJ`, el filtro por año se aplica localmente, así que la query no necesita forzar esa sintaxis si la fuente no la soporta de forma equivalente;
 - en `OpenAlex`, conviene distinguir entre la parte textual de la query y los filtros técnicos del `.env`.
+- en `PubMed`, usa sintaxis propia de PubMed, preferentemente con campos `[Title/Abstract]`;
+- si el tema está claramente relacionado con salud, medicina, biomedicina, bioética, educación médica o IA en salud, el agente debe proponer PubMed como fuente especializada.
+- si Scopus está activo con `SCOPUS_MODE=manual_csv`, esta fase debe terminar con una pausa operativa: el usuario debe buscar manualmente en Scopus con `search/scopus/query.txt`, exportar CSV, guardar el archivo en el workspace y completar `SCOPUS_CSV_FILE` antes de autorizar Fase 3.
 
 Nota:
 
@@ -132,6 +137,7 @@ Nota:
 Transición obligatoria:
 
 - al cerrar Fase 2, el agente debe pedir autorización breve del usuario antes de ejecutar Fase 3.
+- si `SCOPUS_MODE=manual_csv` y falta `SCOPUS_CSV_FILE` o el archivo no existe, el agente no debe pedir autorización para Fase 3 todavía; debe pedir primero el CSV exportado.
 
 Salida:
 
@@ -156,6 +162,7 @@ Entrada:
 - `search/<fuente>/query.txt`
 - archivo de configuración disponible y validado por el estudiante
 - parámetros de OpenAlex
+- si Scopus usa `manual_csv`, CSV exportado desde Scopus ya disponible y declarado en `SCOPUS_CSV_FILE`
 
 Acción:
 
@@ -178,6 +185,8 @@ Script orquestador recomendado para esta modalidad:
 Configuración mínima recomendada en `case.env`:
 
 - `PRISMA_PHASE3_SOURCES=openalex,doaj,redalyc`
+- si el tema requiere PubMed: `PRISMA_PHASE3_SOURCES=openalex,doaj,pubmed,redalyc`
+- si el caso incorpora Scopus: `PRISMA_PHASE3_SOURCES=openalex,doaj,scopus,redalyc`
 - `PRISMA_PHASE3_AUTO_MERGE=true`
 - todos los `*_OUT_DIR` activos deben apuntar al mismo `outputs/<corrida>`
 
@@ -243,6 +252,8 @@ Nota:
 - ejemplos actuales de subcarpetas por fuente:
   - `search/openalex/`
   - `search/doaj/`
+  - `search/pubmed/`
+  - `search/scopus/`
   - `search/redalyc/`
 
 #### Fusión multi-fuente antes del cribado común

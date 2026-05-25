@@ -59,8 +59,11 @@ Regla operativa para el agente:
 Regla adicional para Fase 3 multi-fuente:
 
 - si el caso declara varias fuentes activas para Fase 3, deben ejecutarse en secuencia dentro de la misma fase;
-- el orden recomendado es `openalex -> doaj -> redalyc`;
+- el orden recomendado por defecto es `openalex -> doaj -> redalyc`;
+- si el caso incorpora Scopus, ubícalo preferentemente como `openalex -> doaj -> scopus -> redalyc`;
 - salvo indicación explícita del usuario, la Fase 3 multi-fuente debe activar `openalex`, `doaj` y `redalyc`;
+- si Scopus está activo con `SCOPUS_MODE=manual_csv`, la Fase 3 no debe iniciar hasta que `SCOPUS_CSV_FILE` apunte a un CSV existente exportado desde Scopus;
+- si el tema está relacionado con salud, medicina, biomedicina, bioética, educación médica, publicación científica biomédica o IA en salud, el agente debe proponer agregar `pubmed` como fuente especializada;
 - la fusión debe ocurrir al cierre de Fase 3, antes de cualquier `initial`;
 - no se debe esperar a `focused` ni a selección final para deduplicar entre fuentes.
 
@@ -127,7 +130,9 @@ Regla de cierre de refinamiento:
 - si la query cambia de forma sustantiva entre corridas, el agente debe actualizar `query.txt` con la version vigente y mantener o crear `query_history.md` para conservar las versiones anteriores y su justificacion;
 - `search_log.md` documenta la corrida vigente, pero no reemplaza el historial de refinamientos.
 - si el caso usa varias fuentes, la Fase 2 debe admitir una `query` por fuente;
-- el agente no debe asumir que una misma sintaxis sirve de forma identica para `OpenAlex`, `DOAJ` y `Redalyc`;
+- el agente no debe asumir que una misma sintaxis sirve de forma identica para `OpenAlex`, `DOAJ`, `Scopus` y `Redalyc`;
+- si el caso usa PubMed, debe traducir la estrategia a sintaxis PubMed, preferentemente con campos `[Title/Abstract]`;
+- si el caso usa Scopus en modo `manual_csv`, el cierre de Fase 2 debe detenerse para que el usuario ejecute la búsqueda web en Scopus, exporte el CSV, guarde el archivo en el workspace y complete `SCOPUS_CSV_FILE`;
 - puede existir una estrategia conceptual comun, pero debe traducirse y guardarse por separado en cada `search/<fuente>/query.txt`;
 - si las queries por fuente divergen de forma sustantiva, la justificacion debe quedar trazada por fuente en `query_history.md`.
 - al cerrar Fase 2, el agente debe pedir aprobación breve del usuario antes de ejecutar Fase 3.
@@ -204,6 +209,8 @@ No se recomienda pasar de dos niveles de cribado más una selección final dentr
 - Usa las plantillas de `assets/` cuando necesites producir matrices o formatos reutilizables.
 - Si el trabajo requiere automatizar la búsqueda abierta en OpenAlex, consulta `guides/openalex-automation.md`.
 - Si el trabajo requiere automatizar búsqueda abierta en DOAJ, consulta `guides/doaj-automation.md`.
+- Si el tema tiene pertinencia biomédica o de salud y requiere PubMed, consulta `guides/pubmed-automation.md`.
+- Si el trabajo requiere incorporar Scopus, consulta `guides/scopus-automation.md`.
 - Si el trabajo requiere automatizar búsqueda regional en Redalyc con API key, consulta `guides/redalyc-automation.md`.
 - Si el trabajo requiere avanzar con pausas y autorización entre etapas, consulta `guides/automation-by-phases.md`.
 
@@ -214,6 +221,8 @@ Antes de ejecutar **cualquier fase** del flujo automatizado, el agente **DEBE**:
 1. Consultar la guía de automatización correspondiente a la fuente activa para identificar el script, los argumentos y los artefactos esperados de esa fase.
    - `guides/openalex-automation.md` para OpenAlex
    - `guides/doaj-automation.md` para DOAJ
+   - `guides/pubmed-automation.md` para PubMed
+   - `guides/scopus-automation.md` para Scopus
    - `guides/redalyc-automation.md` para Redalyc
    - si el caso declara una Fase 3 multi-fuente, consultar también `guides/automation-by-phases.md`
 2. Usar el script documentado en la guía. **No improvisar** herramientas alternativas si existe un script diseñado para esa tarea.

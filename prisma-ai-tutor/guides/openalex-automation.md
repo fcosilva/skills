@@ -529,10 +529,10 @@ Si quieres escribir el resumen en otra ruta, puedes usar `--summary`.
 ### Pendiente para la siguiente iteración
 
 - deduplicación entre múltiples fuentes;
-- conector para `SciELO` o `Redalyc`;
+- madurar la vía semiasistida de `SciELO`;
 - exportación directa al formato final del protocolo;
 - clasificación preliminar automática por elegibilidad;
-- integración con `Scopus` o `Web of Science` cuando haya credenciales.
+- integración con fuentes adicionales condicionadas, como `Scopus` con CSV/API o `PubMed` cuando el tema sea biomédico o de salud.
 
 ## Relación con el skill
 
