@@ -27,7 +27,7 @@ Regla práctica:
 | `prepare_fulltext_review_text.py` | Fase 6 | Extraer texto plano desde PDF/HTML útiles | `fulltext_download_log.csv`, carpeta fulltext | `fulltext/review_text/`, log y resumen de extracción textual |
 | `prepare_zotero_import.py` | Fase 8 | Preparar metadata del corpus final para Zotero | selección final, matriz | paquete de importación Zotero |
 | `sync_zotero_mcp.py` | Fase 8 | Sincronizar ítems con Zotero vía MCP | paquete de importación, configuración Zotero | acciones y resumen Zotero |
-| `write_zotero_notes.py` | Fase 8 | Crear notas hijas de trazabilidad en Zotero | decisiones/matriz | notas de `screening`, resumen y acciones |
+| `write_zotero_notes.py` | Fase 8 y notas posteriores | Crear notas hijas de trazabilidad en Zotero | decisiones/matriz/extracción | notas por fase, `zotero_notes_<fase>_summary.json`, `zotero_notes_<fase>_actions.csv` |
 | `run_outputs.py` | Todas | Regenerar índice y resúmenes de corrida | `outputs/<corrida>/` | `run_overview.md`, trazas y resúmenes derivados |
 | `render_matrix_templates.py` | Soporte | Renderizar plantillas reutilizables | assets del skill | matrices/plantillas renderizadas |
 

@@ -20,6 +20,7 @@
 
 - `zotero/zotero_import_summary.json`
 - `zotero/zotero_sync_summary.json`
+- `zotero/zotero_notes_screening_summary.json`
 - `zotero/zotero_notes_summary.json`
 
 ## Observaciones

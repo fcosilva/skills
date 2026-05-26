@@ -275,6 +275,8 @@ Artefactos esperados de esta fase:
 - `zotero/zotero_import_summary.json`
 - `zotero/zotero_sync_summary.json`
 - `zotero/zotero_sync_actions.csv`
+- `zotero/zotero_notes_screening_summary.json`
+- `zotero/zotero_notes_screening_actions.csv`
 - `zotero/zotero_notes_summary.json`
 - `zotero/zotero_notes_actions.csv`
 

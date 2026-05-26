@@ -83,20 +83,28 @@ def count_decision(rows: list[dict[str, str]], decision: str) -> int:
 
 
 def is_zotero_screening_notes_complete(run_dir: Path) -> bool:
-    notes_summary_path = first_existing(
+    summary_candidates = [
+        run_dir / "zotero" / "zotero_notes_screening_summary.json",
+        run_dir / "zotero_notes_screening_summary.json",
         run_dir / "zotero" / "zotero_notes_summary.json",
         run_dir / "zotero_notes_summary.json",
-    )
-    notes_actions_path = first_existing(
+    ]
+    actions_candidates = [
+        run_dir / "zotero" / "zotero_notes_screening_actions.csv",
+        run_dir / "zotero_notes_screening_actions.csv",
         run_dir / "zotero" / "zotero_notes_actions.csv",
         run_dir / "zotero_notes_actions.csv",
-    )
-    notes_summary = read_json(notes_summary_path) or {}
-    actions = notes_summary.get("actions")
-    if isinstance(actions, list) and any(action.get("phase") in ("screening", "extraction") for action in actions):
-        return True
-    rows = read_csv_rows(notes_actions_path)
-    return any(row.get("phase", "").strip() in ("screening", "extraction") for row in rows)
+    ]
+    for notes_summary_path in summary_candidates:
+        notes_summary = read_json(notes_summary_path) or {}
+        actions = notes_summary.get("actions")
+        if isinstance(actions, list) and any(action.get("phase") == "screening" for action in actions):
+            return True
+    for notes_actions_path in actions_candidates:
+        rows = read_csv_rows(notes_actions_path)
+        if any(row.get("phase", "").strip() == "screening" for row in rows):
+            return True
+    return False
 
 
 def focused_review_rows(
@@ -629,7 +637,25 @@ def build_zotero_summary(run_dir: Path) -> str | None:
     prepared = read_json(first_existing(run_dir / "zotero" / "zotero_import_summary.json", run_dir / "zotero_import_summary.json")) or {}
     sync = read_json(first_existing(run_dir / "zotero" / "zotero_sync_summary.json", run_dir / "zotero_sync_summary.json")) or {}
     notes = read_json(first_existing(run_dir / "zotero" / "zotero_notes_summary.json", run_dir / "zotero_notes_summary.json")) or {}
-    if not prepared and not sync and not notes:
+    screening_notes = read_json(
+        first_existing(
+            run_dir / "zotero" / "zotero_notes_screening_summary.json",
+            run_dir / "zotero_notes_screening_summary.json",
+        )
+    ) or {}
+    extraction_notes = read_json(
+        first_existing(
+            run_dir / "zotero" / "zotero_notes_extraction_summary.json",
+            run_dir / "zotero_notes_extraction_summary.json",
+        )
+    ) or {}
+    quality_notes = read_json(
+        first_existing(
+            run_dir / "zotero" / "zotero_notes_quality_summary.json",
+            run_dir / "zotero_notes_quality_summary.json",
+        )
+    ) or {}
+    if not prepared and not sync and not notes and not screening_notes and not extraction_notes and not quality_notes:
         return None
     collection = sync.get("collection", {}).get("path") or prepared.get("zotero_collection") or "No reportado"
     lines = [
@@ -640,6 +666,9 @@ def build_zotero_summary(run_dir: Path) -> str | None:
         f"- Ítems preparados: `{prepared.get('included_items', 0)}`",
         f"- Ítems sincronizados: `{len(sync.get('actions', [])) if isinstance(sync.get('actions'), list) else 0}`",
         f"- Notas procesadas: `{notes.get('notes_processed', 0)}`",
+        f"- Notas de screening: `{screening_notes.get('notes_processed', 0)}`",
+        f"- Notas de extracción: `{extraction_notes.get('notes_processed', 0)}`",
+        f"- Notas de calidad: `{quality_notes.get('notes_processed', 0)}`",
         "",
     ]
     return "\n".join(lines) + "\n"

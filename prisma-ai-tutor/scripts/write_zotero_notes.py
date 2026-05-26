@@ -21,6 +21,19 @@ SCREENING_REASON_HEADER = "Motivo de cribado"
 SCREENING_CRITERION_HEADER = "Criterio de cribado"
 FINAL_BASIS_HEADER = "Base de seleccion final"
 FINAL_NOTE_HEADER = "Observacion de seleccion final"
+DEFAULT_SKIP_NOTE_FIELDS = {
+    "",
+    "Codigo",
+    "Código",
+    "Titulo",
+    "Título",
+    "Autor/ano",
+    "Autor/año",
+    "Pais",
+    "País",
+    "Primera afiliacion",
+    "Primera afiliación",
+}
 
 
 @dataclass
@@ -215,36 +228,7 @@ def build_extraction_note_content(
         "",
     ]
     if extraction_row:
-        if "Población" in extraction_row or "Poblacion" in extraction_row or "Tipo de patología" in extraction_row:
-            lines.extend(
-                [
-                    f"- Población: {extraction_row.get('Población', extraction_row.get('Poblacion', ''))}",
-                    f"- Tipo de patología: {extraction_row.get('Tipo de patología', extraction_row.get('Tipo de patologia', ''))}",
-                    f"- Métodos diagnósticos: {extraction_row.get('Métodos diagnósticos', extraction_row.get('Metodos diagnosticos', ''))}",
-                    f"- Enfoque terapéutico: {extraction_row.get('Enfoque terapéutico', extraction_row.get('Enfoque terapeutico', ''))}",
-                    f"- Resultados clínicos / recuperación: {extraction_row.get('Resultados clínicos / recuperación', extraction_row.get('Resultados clinicos / recuperacion', ''))}",
-                    f"- Limitaciones: {extraction_row.get('Limitaciones reportadas', extraction_row.get('Limitaciones', ''))}",
-                    f"- Relevancia: {extraction_row.get('Relevancia', '')}",
-                ]
-            )
-        else:
-            lines.extend(
-                [
-                    f"- Objetivo: {extraction_row.get('Objetivo', '')}",
-                    f"- Metodo: {extraction_row.get('Metodo', '')}",
-                    f"- Contexto: {extraction_row.get('Contexto', '')}",
-                    f"- Muestra/corpus: {extraction_row.get('Muestra/corpus', '')}",
-                    f"- Tecnologia/herramienta: {extraction_row.get('Tecnologia/herramienta', '')}",
-                    f"- Variable principal observada: {extraction_row.get('Variable principal observada', '')}",
-                    f"- Tipo de efecto reportado: {extraction_row.get('Tipo de efecto reportado', '')}",
-                    f"- Relacion con autonomia: {extraction_row.get('Relacion con autonomia', '')}",
-                    f"- Relacion con dependencia cognitiva: {extraction_row.get('Relacion con dependencia cognitiva', '')}",
-                    f"- Relacion con rendimiento en programacion: {extraction_row.get('Relacion con rendimiento en programacion', '')}",
-                    f"- Hallazgos principales: {extraction_row.get('Hallazgos principales', '')}",
-                    f"- Limitaciones: {extraction_row.get('Limitaciones', '')}",
-                    f"- Relevancia: {extraction_row.get('Relevancia', '')}",
-                ]
-            )
+        lines.extend(render_note_fields(extraction_row))
     else:
         lines.extend(
             [
@@ -271,27 +255,24 @@ def build_quality_note_content(
         "",
     ]
     if extraction_row:
-        if "Población" in extraction_row or "Poblacion" in extraction_row or "Tipo de patología" in extraction_row:
-            lines.extend(
-                [
-                    f"- Población: {extraction_row.get('Población', extraction_row.get('Poblacion', ''))}",
-                    f"- Tipo de patología: {extraction_row.get('Tipo de patología', extraction_row.get('Tipo de patologia', ''))}",
-                    f"- Limitaciones: {extraction_row.get('Limitaciones reportadas', extraction_row.get('Limitaciones', ''))}",
-                    f"- Relevancia: {extraction_row.get('Relevancia', '')}",
-                ]
-            )
-        else:
-            lines.extend(
-                [
-                    f"- Metodo reportado: {extraction_row.get('Metodo', '')}",
-                    f"- Muestra/corpus: {extraction_row.get('Muestra/corpus', '')}",
-                    f"- Limitaciones: {extraction_row.get('Limitaciones', '')}",
-                    f"- Relevancia: {extraction_row.get('Relevancia', '')}",
-                ]
-            )
+        lines.extend(render_note_fields(extraction_row))
     else:
         lines.append("- No disponible para este estudio en la iteracion actual.")
     return "\n".join(lines).strip() + "\n"
+
+
+def render_note_fields(row: dict[str, str], skip_fields: set[str] | None = None) -> list[str]:
+    excluded = skip_fields or DEFAULT_SKIP_NOTE_FIELDS
+    lines: list[str] = []
+    for key, value in row.items():
+        normalized_key = key.strip()
+        normalized_value = str(value).strip()
+        if normalized_key in excluded:
+            continue
+        if not normalized_value:
+            continue
+        lines.append(f"- {normalized_key}: {normalized_value}")
+    return lines or ["- No disponible para este estudio en la iteracion actual."]
 
 
 def build_note_content(
@@ -428,14 +409,24 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def phase_log_paths(out_dir: Path, phase: str) -> tuple[Path, Path]:
+    return (
+        out_dir / f"zotero_notes_{phase}_summary.json",
+        out_dir / f"zotero_notes_{phase}_actions.csv",
+    )
+
+
 def main() -> int:
     config = parse_args()
     result = sync_notes(config)
     config.out_dir.mkdir(parents=True, exist_ok=True)
-    summary_path = config.out_dir / "zotero_notes_summary.json"
-    actions_path = config.out_dir / "zotero_notes_actions.csv"
+    summary_path, actions_path = phase_log_paths(config.out_dir, config.phase)
+    legacy_summary_path = config.out_dir / "zotero_notes_summary.json"
+    legacy_actions_path = config.out_dir / "zotero_notes_actions.csv"
     write_json(summary_path, result)
     write_csv(actions_path, result["actions"])
+    write_json(legacy_summary_path, result)
+    write_csv(legacy_actions_path, result["actions"])
     refresh_run_outputs(config.out_dir.parent)
     print(
         f"Zotero notes {'preview' if config.dry_run else 'completed'} for "
