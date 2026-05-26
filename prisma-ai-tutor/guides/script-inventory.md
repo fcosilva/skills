@@ -1,0 +1,38 @@
+# Inventario de scripts
+
+Esta tabla ayuda al agente a elegir herramientas existentes antes de crear scripts auxiliares en `scratch/`.
+
+Regla práctica:
+
+- no crear scripts nuevos para tareas ya cubiertas por esta tabla;
+- si falta una capacidad del flujo, documentar la brecha antes de crear una utilidad temporal;
+- cualquier script temporal debe quedar fuera del flujo oficial y no debe reemplazar los artefactos esperados del skill.
+
+| Script | Fase principal | Para qué sirve | Entradas clave | Salidas esperadas |
+|---|---|---|---|---|
+| `openalex_search.py` | Fase 3 | Buscar en OpenAlex y normalizar resultados | `OPENALEX_QUERY_FILE`, filtros, `case.env` | `search/openalex/*`, `screening/screening_matrix.*` |
+| `doaj_search.py` | Fase 3 | Buscar artículos en DOAJ | `DOAJ_QUERY_FILE`, años, `case.env` | `search/doaj/*`, `screening/screening_matrix.*` |
+| `semanticscholar_search.py` | Fase 3 | Buscar en Semantic Scholar con query semántica | `SEMANTIC_SCHOLAR_QUERY_FILE`, API key recomendada | `search/semanticscholar/*`, `screening/screening_matrix.*` |
+| `redalyc_search.py` | Fase 3 | Buscar en Redalyc con API key | `REDALYC_QUERY_FILE`, `REDALYC_SEARCH_FIELD` | `search/redalyc/*`, `screening/screening_matrix.*` |
+| `pubmed_search.py` | Fase 3 | Buscar en PubMed cuando el tema es biomédico o de salud | `PUBMED_QUERY_FILE`, años, API key opcional | `search/pubmed/*`, `screening/screening_matrix.*` |
+| `scopus_search.py` | Fase 3 | Buscar en Scopus vía API cuando hay permisos suficientes | `SCOPUS_QUERY_FILE`, API key | `search/scopus/*`, `screening/screening_matrix.*` |
+| `scopus_import_csv.py` | Fase 3 | Importar CSV exportado manualmente desde Scopus | `SCOPUS_CSV_FILE` | `search/scopus/*`, `screening/screening_matrix.*` |
+| `scielo_search.py` | Fase 3 experimental | Búsqueda semiasistida/experimental en SciELO Search | `SCIELO_QUERY_FILE` | `search/scielo/*`, `screening/screening_matrix.*` |
+| `phase3_multisource_search.py` | Fase 3 | Ejecutar fuentes activas en secuencia y fusionar | `PRISMA_PHASE3_SOURCES`, `case.env` | `search/<fuente>/*`, `search/merged_*`, matriz fusionada |
+| `merge_search_results.py` | Fase 3 | Fusionar y deduplicar resultados normalizados | `search/<fuente>/normalized_results.json` | `search/merged_*`, `source_merge_log.*`, matriz fusionada |
+| `apply_screening_decisions.py` | Fases 4, 5 y 7 | Aplicar decisiones de cribado o selección final a la matriz | `screening_decisions_<fase>.csv`, matriz | matriz actualizada, CSV actualizado, resumen de fase |
+| `summarize_screening.py` | Fases 4, 5 y 7 | Resumir decisiones ya registradas | CSV de decisiones | resumen Markdown |
+| `validate_fulltext_access.py` | Fase 6 | Verificar accesibilidad probable a full text sin descargar documentos | matriz, decisiones focused | matriz actualizada, `screening_matrix.csv` actualizado |
+| `download_fulltext.py` | Fase 6 | Descargar PDF/HTML solo después de autorización | matriz, decisiones focused, `outputs/<corrida>/fulltext/` | `fulltext_download_log.csv`, `fulltext_recovery_summary.md`, archivos fuente |
+| `prepare_fulltext_review_text.py` | Fase 6 | Extraer texto plano desde PDF/HTML útiles | `fulltext_download_log.csv`, carpeta fulltext | `fulltext/review_text/`, log y resumen de extracción textual |
+| `prepare_zotero_import.py` | Fase 8 | Preparar metadata del corpus final para Zotero | selección final, matriz | paquete de importación Zotero |
+| `sync_zotero_mcp.py` | Fase 8 | Sincronizar ítems con Zotero vía MCP | paquete de importación, configuración Zotero | acciones y resumen Zotero |
+| `write_zotero_notes.py` | Fase 8 | Crear notas hijas de trazabilidad en Zotero | decisiones/matriz | notas de `screening`, resumen y acciones |
+| `run_outputs.py` | Todas | Regenerar índice y resúmenes de corrida | `outputs/<corrida>/` | `run_overview.md`, trazas y resúmenes derivados |
+| `render_matrix_templates.py` | Soporte | Renderizar plantillas reutilizables | assets del skill | matrices/plantillas renderizadas |
+
+## Nota sobre cribado
+
+El skill no delega el cribado inicial al usuario. El agente debe producir una propuesta de decisiones en `screening_decisions_initial.csv` y aplicarla con `apply_screening_decisions.py`. Después de eso, el usuario revisa, corrige o aprueba.
+
+Lo mismo aplica para `focused`: el agente propone el cribado focused, deja trazabilidad y luego pide revisión humana antes de avanzar.

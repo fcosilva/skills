@@ -150,6 +150,14 @@ def write_summary(path: Path, output_dir: Path, rows: list[dict[str, str]]) -> N
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def infer_run_dir(output_dir: Path, summary_path: Path) -> Path:
+    if summary_path.parent.name == "fulltext":
+        return summary_path.parent.parent
+    if output_dir.parent.name == "fulltext":
+        return output_dir.parent.parent
+    return output_dir.parent
+
+
 def main() -> int:
     args = parse_args()
     env_config = {WORKSPACE_ROOT_KEY: args.workspace_root} if args.workspace_root else None
@@ -189,7 +197,7 @@ def main() -> int:
 
     write_csv(log_path, rows)
     write_summary(summary_path, output_dir, rows)
-    refresh_run_outputs(output_dir.parent.parent)
+    refresh_run_outputs(infer_run_dir(output_dir, summary_path))
     print(
         f"Prepared {sum(1 for row in rows if row['status'] == 'prepared')} review text files in: {output_dir}"
     )

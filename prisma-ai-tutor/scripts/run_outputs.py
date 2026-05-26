@@ -93,10 +93,10 @@ def is_zotero_screening_notes_complete(run_dir: Path) -> bool:
     )
     notes_summary = read_json(notes_summary_path) or {}
     actions = notes_summary.get("actions")
-    if isinstance(actions, list) and any(action.get("phase") == "screening" for action in actions):
+    if isinstance(actions, list) and any(action.get("phase") in ("screening", "extraction") for action in actions):
         return True
     rows = read_csv_rows(notes_actions_path)
-    return any(row.get("phase", "").strip() == "screening" for row in rows)
+    return any(row.get("phase", "").strip() in ("screening", "extraction") for row in rows)
 
 
 def focused_review_rows(
@@ -166,6 +166,7 @@ def estimated_result_count(search_summary: dict[str, Any]) -> Any:
         "openalex_meta_count",
         "scielo_meta_count",
         "doaj_meta_count",
+        "semanticscholar_meta_count",
         "pubmed_meta_count",
         "scopus_meta_count",
         "redalyc_meta_count",
@@ -192,6 +193,7 @@ def determine_phase_statuses(run_dir: Path) -> dict[str, str]:
         run_dir / "search" / "openalex" / "summary.json",
         run_dir / "search" / "scielo" / "summary.json",
         run_dir / "search" / "doaj" / "summary.json",
+        run_dir / "search" / "semanticscholar" / "summary.json",
         run_dir / "search" / "pubmed" / "summary.json",
         run_dir / "search" / "scopus" / "summary.json",
         run_dir / "search" / "redalyc" / "summary.json",
@@ -308,6 +310,7 @@ def find_case_context(run_dir: Path) -> tuple[str, Path | None, Path | None]:
             run_dir / "search" / "openalex" / "summary.json",
             run_dir / "search" / "scielo" / "summary.json",
             run_dir / "search" / "doaj" / "summary.json",
+            run_dir / "search" / "semanticscholar" / "summary.json",
             run_dir / "search" / "pubmed" / "summary.json",
             run_dir / "search" / "scopus" / "summary.json",
             run_dir / "search" / "redalyc" / "summary.json",
@@ -340,6 +343,7 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "openalex" / "summary.json",
         search_dir / "scielo" / "summary.json",
         search_dir / "doaj" / "summary.json",
+        search_dir / "semanticscholar" / "summary.json",
         search_dir / "pubmed" / "summary.json",
         search_dir / "scopus" / "summary.json",
         search_dir / "redalyc" / "summary.json",
@@ -350,6 +354,7 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "openalex" / "query.txt",
         search_dir / "scielo" / "query.txt",
         search_dir / "doaj" / "query.txt",
+        search_dir / "semanticscholar" / "query.txt",
         search_dir / "pubmed" / "query.txt",
         search_dir / "scopus" / "query.txt",
         search_dir / "redalyc" / "query.txt",
@@ -360,6 +365,7 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "openalex" / "query_history.md",
         search_dir / "scielo" / "query_history.md",
         search_dir / "doaj" / "query_history.md",
+        search_dir / "semanticscholar" / "query_history.md",
         search_dir / "pubmed" / "query_history.md",
         search_dir / "scopus" / "query_history.md",
         search_dir / "redalyc" / "query_history.md",
@@ -371,6 +377,7 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "openalex" / "search_log.md",
         search_dir / "scielo" / "search_log.md",
         search_dir / "doaj" / "search_log.md",
+        search_dir / "semanticscholar" / "search_log.md",
         search_dir / "pubmed" / "search_log.md",
         search_dir / "scopus" / "search_log.md",
         search_dir / "redalyc" / "search_log.md",

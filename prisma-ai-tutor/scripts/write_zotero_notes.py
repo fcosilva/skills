@@ -215,23 +215,36 @@ def build_extraction_note_content(
         "",
     ]
     if extraction_row:
-        lines.extend(
-            [
-                f"- Objetivo: {extraction_row.get('Objetivo', '')}",
-                f"- Metodo: {extraction_row.get('Metodo', '')}",
-                f"- Contexto: {extraction_row.get('Contexto', '')}",
-                f"- Muestra/corpus: {extraction_row.get('Muestra/corpus', '')}",
-                f"- Tecnologia/herramienta: {extraction_row.get('Tecnologia/herramienta', '')}",
-                f"- Variable principal observada: {extraction_row.get('Variable principal observada', '')}",
-                f"- Tipo de efecto reportado: {extraction_row.get('Tipo de efecto reportado', '')}",
-                f"- Relacion con autonomia: {extraction_row.get('Relacion con autonomia', '')}",
-                f"- Relacion con dependencia cognitiva: {extraction_row.get('Relacion con dependencia cognitiva', '')}",
-                f"- Relacion con rendimiento en programacion: {extraction_row.get('Relacion con rendimiento en programacion', '')}",
-                f"- Hallazgos principales: {extraction_row.get('Hallazgos principales', '')}",
-                f"- Limitaciones: {extraction_row.get('Limitaciones', '')}",
-                f"- Relevancia: {extraction_row.get('Relevancia', '')}",
-            ]
-        )
+        if "Población" in extraction_row or "Poblacion" in extraction_row or "Tipo de patología" in extraction_row:
+            lines.extend(
+                [
+                    f"- Población: {extraction_row.get('Población', extraction_row.get('Poblacion', ''))}",
+                    f"- Tipo de patología: {extraction_row.get('Tipo de patología', extraction_row.get('Tipo de patologia', ''))}",
+                    f"- Métodos diagnósticos: {extraction_row.get('Métodos diagnósticos', extraction_row.get('Metodos diagnosticos', ''))}",
+                    f"- Enfoque terapéutico: {extraction_row.get('Enfoque terapéutico', extraction_row.get('Enfoque terapeutico', ''))}",
+                    f"- Resultados clínicos / recuperación: {extraction_row.get('Resultados clínicos / recuperación', extraction_row.get('Resultados clinicos / recuperacion', ''))}",
+                    f"- Limitaciones: {extraction_row.get('Limitaciones reportadas', extraction_row.get('Limitaciones', ''))}",
+                    f"- Relevancia: {extraction_row.get('Relevancia', '')}",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"- Objetivo: {extraction_row.get('Objetivo', '')}",
+                    f"- Metodo: {extraction_row.get('Metodo', '')}",
+                    f"- Contexto: {extraction_row.get('Contexto', '')}",
+                    f"- Muestra/corpus: {extraction_row.get('Muestra/corpus', '')}",
+                    f"- Tecnologia/herramienta: {extraction_row.get('Tecnologia/herramienta', '')}",
+                    f"- Variable principal observada: {extraction_row.get('Variable principal observada', '')}",
+                    f"- Tipo de efecto reportado: {extraction_row.get('Tipo de efecto reportado', '')}",
+                    f"- Relacion con autonomia: {extraction_row.get('Relacion con autonomia', '')}",
+                    f"- Relacion con dependencia cognitiva: {extraction_row.get('Relacion con dependencia cognitiva', '')}",
+                    f"- Relacion con rendimiento en programacion: {extraction_row.get('Relacion con rendimiento en programacion', '')}",
+                    f"- Hallazgos principales: {extraction_row.get('Hallazgos principales', '')}",
+                    f"- Limitaciones: {extraction_row.get('Limitaciones', '')}",
+                    f"- Relevancia: {extraction_row.get('Relevancia', '')}",
+                ]
+            )
     else:
         lines.extend(
             [
@@ -258,14 +271,24 @@ def build_quality_note_content(
         "",
     ]
     if extraction_row:
-        lines.extend(
-            [
-                f"- Metodo reportado: {extraction_row.get('Metodo', '')}",
-                f"- Muestra/corpus: {extraction_row.get('Muestra/corpus', '')}",
-                f"- Limitaciones: {extraction_row.get('Limitaciones', '')}",
-                f"- Relevancia: {extraction_row.get('Relevancia', '')}",
-            ]
-        )
+        if "Población" in extraction_row or "Poblacion" in extraction_row or "Tipo de patología" in extraction_row:
+            lines.extend(
+                [
+                    f"- Población: {extraction_row.get('Población', extraction_row.get('Poblacion', ''))}",
+                    f"- Tipo de patología: {extraction_row.get('Tipo de patología', extraction_row.get('Tipo de patologia', ''))}",
+                    f"- Limitaciones: {extraction_row.get('Limitaciones reportadas', extraction_row.get('Limitaciones', ''))}",
+                    f"- Relevancia: {extraction_row.get('Relevancia', '')}",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"- Metodo reportado: {extraction_row.get('Metodo', '')}",
+                    f"- Muestra/corpus: {extraction_row.get('Muestra/corpus', '')}",
+                    f"- Limitaciones: {extraction_row.get('Limitaciones', '')}",
+                    f"- Relevancia: {extraction_row.get('Relevancia', '')}",
+                ]
+            )
     else:
         lines.append("- No disponible para este estudio en la iteracion actual.")
     return "\n".join(lines).strip() + "\n"

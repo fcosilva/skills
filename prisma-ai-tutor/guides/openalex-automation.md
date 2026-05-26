@@ -227,7 +227,7 @@ Ejemplo:
 python3 skills/prisma-ai-tutor/scripts/download_fulltext.py \
   --matrix outputs/<corrida>/screening/screening_matrix.md \
   --decisions outputs/<corrida>/screening/screening_decisions_focused.csv \
-  --output-dir cases/ia-generativa-programacion/fulltext \
+  --output-dir outputs/<corrida>/fulltext \
   --log outputs/<corrida>/fulltext/fulltext_download_log.csv \
   --summary outputs/<corrida>/fulltext/fulltext_recovery_summary.md \
   --config-file cases/ia-generativa-programacion/case.env
@@ -239,7 +239,7 @@ Ejemplo con cookies exportadas del navegador:
 python3 skills/prisma-ai-tutor/scripts/download_fulltext.py \
   --matrix outputs/<corrida>/screening/screening_matrix.md \
   --decisions outputs/<corrida>/screening/screening_decisions_focused.csv \
-  --output-dir cases/ia-generativa-programacion/fulltext \
+  --output-dir outputs/<corrida>/fulltext \
   --log outputs/<corrida>/fulltext/fulltext_download_log.csv \
   --summary outputs/<corrida>/fulltext/fulltext_recovery_summary.md \
   --config-file cases/ia-generativa-programacion/case.env \
@@ -248,7 +248,7 @@ python3 skills/prisma-ai-tutor/scripts/download_fulltext.py \
 
 Artefactos esperados:
 
-- carpeta local de documentos fuente, por ejemplo `cases/<slug>/fulltext/`
+- carpeta local de documentos fuente, por ejemplo `outputs/<corrida>/fulltext/`
 - `outputs/<corrida>/fulltext/fulltext_download_log.csv`
 - `outputs/<corrida>/fulltext/fulltext_recovery_summary.md`
 
@@ -276,7 +276,7 @@ Ejemplo:
 
 ```bash
 python3 skills/prisma-ai-tutor/scripts/prepare_fulltext_review_text.py \
-  --input-dir cases/ia-generativa-programacion/fulltext \
+  --input-dir outputs/<corrida>/fulltext \
   --output-dir outputs/<corrida>/fulltext/review_text \
   --download-log outputs/<corrida>/fulltext/fulltext_download_log.csv
 ```
@@ -390,7 +390,7 @@ PRISMA_AI_TUTOR_BASE_CONFIG=../../config/prisma-ai-tutor/base.env
 PRISMA_AI_TUTOR_WORKSPACE_ROOT=../..
 OPENALEX_QUERY_FILE=outputs/mi-corrida/search/openalex/query.txt
 OPENALEX_OUT_DIR=outputs/mi-corrida
-ZOTERO_ATTACHMENTS_DIR=cases/mi-caso/fulltext
+ZOTERO_ATTACHMENTS_DIR=outputs/mi-corrida/fulltext
 ZOTERO_SCREENING_DECISIONS=outputs/mi-corrida/screening/screening_decisions_final.csv
 ZOTERO_SCREENING_MATRIX=outputs/mi-corrida/screening/screening_matrix.csv
 ```
@@ -532,7 +532,7 @@ Si quieres escribir el resumen en otra ruta, puedes usar `--summary`.
 - madurar la vía semiasistida de `SciELO`;
 - exportación directa al formato final del protocolo;
 - clasificación preliminar automática por elegibilidad;
-- integración con fuentes adicionales condicionadas, como `Scopus` con CSV/API o `PubMed` cuando el tema sea biomédico o de salud.
+- integración con fuentes adicionales y complementarias, como `Semantic Scholar` por defecto, `Scopus` con CSV/API o `PubMed` cuando el tema sea biomédico o de salud.
 
 ## Relación con el skill
 

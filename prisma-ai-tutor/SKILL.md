@@ -38,6 +38,14 @@ Usa este skill cuando el usuario necesite apoyo metodológico para una mini revi
 12. Ayuda a redactar una síntesis narrativa sin exagerar resultados.
 13. Verifica trazabilidad, límites del curso y declaración de uso de IA.
 
+## Regla sobre scripts auxiliares
+
+Antes de crear scripts nuevos o usar `scratch/`, el agente debe revisar `guides/script-inventory.md`.
+
+- No debe crear scripts ad hoc para tareas ya cubiertas por los scripts oficiales.
+- Si necesita una utilidad temporal, debe explicar por qué no alcanza con los scripts existentes y no debe convertirla en artefacto oficial del flujo.
+- El cribado `initial` y `focused` lo propone el agente; el usuario revisa, corrige o aprueba, pero no debe recibir como tarea inicial hacer el filtrado que corresponde al agente.
+
 ## Regla de secuencialidad
 
 Las fases del skill son estrictamente secuenciales.
@@ -59,9 +67,10 @@ Regla operativa para el agente:
 Regla adicional para Fase 3 multi-fuente:
 
 - si el caso declara varias fuentes activas para Fase 3, deben ejecutarse en secuencia dentro de la misma fase;
-- el orden recomendado por defecto es `openalex -> doaj -> redalyc`;
-- si el caso incorpora Scopus, ubícalo preferentemente como `openalex -> doaj -> scopus -> redalyc`;
-- salvo indicación explícita del usuario, la Fase 3 multi-fuente debe activar `openalex`, `doaj` y `redalyc`;
+- el orden recomendado por defecto es `openalex -> doaj -> semanticscholar -> redalyc`;
+- si el caso incorpora Scopus, ubícalo preferentemente como `openalex -> doaj -> semanticscholar -> scopus -> redalyc`;
+- salvo indicación explícita del usuario, la Fase 3 multi-fuente debe activar `openalex`, `doaj`, `semanticscholar` y `redalyc`;
+- `semanticscholar` debe usarse como fuente semántica complementaria: su query no es booleana estricta y debe redactarse como frase o concepto natural alineado con el tema;
 - si Scopus está activo con `SCOPUS_MODE=manual_csv`, la Fase 3 no debe iniciar hasta que `SCOPUS_CSV_FILE` apunte a un CSV existente exportado desde Scopus;
 - si el tema está relacionado con salud, medicina, biomedicina, bioética, educación médica, publicación científica biomédica o IA en salud, el agente debe proponer agregar `pubmed` como fuente especializada;
 - la fusión debe ocurrir al cierre de Fase 3, antes de cualquier `initial`;
@@ -130,7 +139,8 @@ Regla de cierre de refinamiento:
 - si la query cambia de forma sustantiva entre corridas, el agente debe actualizar `query.txt` con la version vigente y mantener o crear `query_history.md` para conservar las versiones anteriores y su justificacion;
 - `search_log.md` documenta la corrida vigente, pero no reemplaza el historial de refinamientos.
 - si el caso usa varias fuentes, la Fase 2 debe admitir una `query` por fuente;
-- el agente no debe asumir que una misma sintaxis sirve de forma identica para `OpenAlex`, `DOAJ`, `Scopus` y `Redalyc`;
+- el agente no debe asumir que una misma sintaxis sirve de forma identica para `OpenAlex`, `DOAJ`, `Semantic Scholar`, `Scopus` y `Redalyc`;
+- si el caso usa Semantic Scholar, debe traducir la estrategia conceptual a una query semantica natural, no a operadores booleanos ni busqueda por campos especificos;
 - si el caso usa PubMed, debe traducir la estrategia a sintaxis PubMed, preferentemente con campos `[Title/Abstract]`;
 - si el caso usa Scopus en modo `manual_csv`, el cierre de Fase 2 debe detenerse para que el usuario ejecute la búsqueda web en Scopus, exporte el CSV, guarde el archivo en el workspace y complete `SCOPUS_CSV_FILE`;
 - puede existir una estrategia conceptual comun, pero debe traducirse y guardarse por separado en cada `search/<fuente>/query.txt`;
@@ -209,10 +219,12 @@ No se recomienda pasar de dos niveles de cribado más una selección final dentr
 - Usa las plantillas de `assets/` cuando necesites producir matrices o formatos reutilizables.
 - Si el trabajo requiere automatizar la búsqueda abierta en OpenAlex, consulta `guides/openalex-automation.md`.
 - Si el trabajo requiere automatizar búsqueda abierta en DOAJ, consulta `guides/doaj-automation.md`.
+- Si el trabajo requiere automatizar búsqueda semántica complementaria en Semantic Scholar, consulta `guides/semanticscholar-automation.md`.
 - Si el tema tiene pertinencia biomédica o de salud y requiere PubMed, consulta `guides/pubmed-automation.md`.
 - Si el trabajo requiere incorporar Scopus, consulta `guides/scopus-automation.md`.
 - Si el trabajo requiere automatizar búsqueda regional en Redalyc con API key, consulta `guides/redalyc-automation.md`.
 - Si el trabajo requiere avanzar con pausas y autorización entre etapas, consulta `guides/automation-by-phases.md`.
+- Si necesitas decidir qué script usar, consulta `guides/script-inventory.md`.
 
 ## Regla de consulta previa (obligatoria)
 
@@ -221,10 +233,12 @@ Antes de ejecutar **cualquier fase** del flujo automatizado, el agente **DEBE**:
 1. Consultar la guía de automatización correspondiente a la fuente activa para identificar el script, los argumentos y los artefactos esperados de esa fase.
    - `guides/openalex-automation.md` para OpenAlex
    - `guides/doaj-automation.md` para DOAJ
+   - `guides/semanticscholar-automation.md` para Semantic Scholar
    - `guides/pubmed-automation.md` para PubMed
    - `guides/scopus-automation.md` para Scopus
    - `guides/redalyc-automation.md` para Redalyc
    - si el caso declara una Fase 3 multi-fuente, consultar también `guides/automation-by-phases.md`
+   - `guides/script-inventory.md` para no duplicar scripts existentes
 2. Usar el script documentado en la guía. **No improvisar** herramientas alternativas si existe un script diseñado para esa tarea.
 3. Si el script requiere acceso a red u otra capacidad restringida por el sandbox, solicita permisos. Si la ejecución sigue bloqueada o falla por restricciones del entorno, entonces propone el comando exacto al usuario para que lo ejecute en su terminal.
 

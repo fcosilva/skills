@@ -26,13 +26,13 @@ PubMed no reemplaza automáticamente a OpenAlex o DOAJ. Se añade como fuente es
 Ejemplo de configuración:
 
 ```env
-PRISMA_PHASE3_SOURCES=openalex,doaj,pubmed,redalyc
+PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,pubmed,redalyc
 ```
 
 Si además el caso usa Scopus:
 
 ```env
-PRISMA_PHASE3_SOURCES=openalex,doaj,pubmed,scopus,redalyc
+PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,pubmed,scopus,redalyc
 ```
 
 ## API usada

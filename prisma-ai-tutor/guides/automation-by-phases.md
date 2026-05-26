@@ -106,11 +106,12 @@ Acción:
 Modo multi-fuente recomendado:
 
 - si el caso activa más de una fuente, Fase 2 debe producir una `query` por fuente;
-- no asumas que la sintaxis exacta puede reutilizarse sin cambios entre `OpenAlex`, `DOAJ`, `PubMed`, `Scopus` y `Redalyc`;
+- no asumas que la sintaxis exacta puede reutilizarse sin cambios entre `OpenAlex`, `DOAJ`, `Semantic Scholar`, `PubMed`, `Scopus` y `Redalyc`;
 - parte de una estrategia conceptual comun, pero traduce cada version al comportamiento real de la fuente;
 - deja visible la version aprobada en:
   - `search/openalex/query.txt`
   - `search/doaj/query.txt`
+  - `search/semanticscholar/query.txt`
   - `search/pubmed/query.txt` si el tema tiene pertinencia biomédica o de salud
   - `search/scopus/query.txt` si el caso incorpora Scopus
   - `search/redalyc/query.txt`
@@ -125,6 +126,7 @@ Reglas operativas:
 - en `Redalyc`, `subject` representa disciplina o descriptores tematicos, no resumen; no lo trates como reemplazo de `abstract`;
 - en `DOAJ`, el filtro por año se aplica localmente, así que la query no necesita forzar esa sintaxis si la fuente no la soporta de forma equivalente;
 - en `OpenAlex`, conviene distinguir entre la parte textual de la query y los filtros técnicos del `.env`.
+- en `Semantic Scholar`, usa una frase semántica natural; no la presentes como query booleana estricta ni como búsqueda por campo `title/abstract/keywords`;
 - en `PubMed`, usa sintaxis propia de PubMed, preferentemente con campos `[Title/Abstract]`;
 - si el tema está claramente relacionado con salud, medicina, biomedicina, bioética, educación médica o IA en salud, el agente debe proponer PubMed como fuente especializada.
 - si Scopus está activo con `SCOPUS_MODE=manual_csv`, esta fase debe terminar con una pausa operativa: el usuario debe buscar manualmente en Scopus con `search/scopus/query.txt`, exportar CSV, guardar el archivo en el workspace y completar `SCOPUS_CSV_FILE` antes de autorizar Fase 3.
@@ -162,6 +164,7 @@ Entrada:
 - `search/<fuente>/query.txt`
 - archivo de configuración disponible y validado por el estudiante
 - parámetros de OpenAlex
+- API key de Semantic Scholar recomendada si la fuente está activa, para evitar errores `429`
 - si Scopus usa `manual_csv`, CSV exportado desde Scopus ya disponible y declarado en `SCOPUS_CSV_FILE`
 
 Acción:
@@ -184,9 +187,9 @@ Script orquestador recomendado para esta modalidad:
 
 Configuración mínima recomendada en `case.env`:
 
-- `PRISMA_PHASE3_SOURCES=openalex,doaj,redalyc`
-- si el tema requiere PubMed: `PRISMA_PHASE3_SOURCES=openalex,doaj,pubmed,redalyc`
-- si el caso incorpora Scopus: `PRISMA_PHASE3_SOURCES=openalex,doaj,scopus,redalyc`
+- `PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,redalyc`
+- si el tema requiere PubMed: `PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,pubmed,redalyc`
+- si el caso incorpora Scopus: `PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,scopus,redalyc`
 - `PRISMA_PHASE3_AUTO_MERGE=true`
 - todos los `*_OUT_DIR` activos deben apuntar al mismo `outputs/<corrida>`
 
@@ -252,6 +255,7 @@ Nota:
 - ejemplos actuales de subcarpetas por fuente:
   - `search/openalex/`
   - `search/doaj/`
+  - `search/semanticscholar/`
   - `search/pubmed/`
   - `search/scopus/`
   - `search/redalyc/`
@@ -292,7 +296,9 @@ Entrada:
 
 Acción:
 
-- clasificar cada registro como `Incluir`, `Excluir` o `Dudoso`
+- el agente debe clasificar cada registro como `Incluir`, `Excluir` o `Dudoso`
+- no debe pedir al usuario que haga el filtrado inicial en su lugar
+- al terminar, debe presentar el resultado para revisión, corrección o aprobación humana antes de avanzar
 - completar en la misma matriz:
   - `Decision de cribado`
   - `Motivo de cribado`
@@ -302,6 +308,7 @@ Acción:
 Salida:
 
 - misma `screening/screening_matrix.md` actualizada
+- `screening/screening_decisions_initial.csv`
 - `screening/screening_summary_initial.md`
 
 Pausa:
@@ -320,7 +327,8 @@ Entrada:
 
 Acción:
 
-- reevaluar solo el subconjunto priorizado
+- el agente debe reevaluar solo el subconjunto priorizado
+- no debe trasladar al usuario la tarea de filtrar el `focused`, salvo que el usuario pida explícitamente editar manualmente la matriz
 - aumentar la exigencia de pertinencia tematica y metodologica
 - mantener la decision en la misma matriz y preparar el subconjunto que amerita validacion de acceso o texto completo
 
@@ -331,6 +339,7 @@ Regla de progreso:
 Salida:
 
 - matriz de cribado refinada
+- `screening/screening_decisions_focused.csv`
 - resumen de cribado `focused`
 - subconjunto priorizado para revisar acceso y full text
 
@@ -389,8 +398,9 @@ Entrada:
 
 Acción:
 
-- verificar accesibilidad de texto completo
-- recuperar localmente los archivos fuente cuando sea posible
+- primero verificar accesibilidad de texto completo sin descargar masivamente documentos y actualizar la matriz
+- mostrar el resultado de esa validación y pedir autorización antes de iniciar la descarga local
+- después de la autorización, recuperar localmente los archivos fuente cuando sea posible
 - distinguir entre `pdf_fulltext`, `html_fulltext`, `landing_metadata_only` y `blocked_or_error`
 - preparar texto legible para revisión asistida a partir de los `pdf_fulltext` y `html_fulltext`
 - registrar qué estudios tienen `texto completo` realmente útil para lectura y cuáles deben excluirse por falta de texto completo
@@ -398,7 +408,7 @@ Acción:
 Salida:
 
 - matriz con estado de accesibilidad actualizado
-- carpeta `cases/<slug>/fulltext/` con archivos fuente recuperados
+- carpeta `outputs/<corrida>/fulltext/` con archivos fuente recuperados
 - log de recuperacion y resumen de accesibilidad
 - directorio derivado `outputs/<corrida>/fulltext/review_text/`
 - log y resumen de preparacion de texto para revision
@@ -668,7 +678,7 @@ Objetivo:
 
 Artefactos sugeridos:
 
-- carpeta local del caso, por ejemplo `cases/<tema-slug>/fulltext/`
+- carpeta local de la corrida, por ejemplo `outputs/<corrida>/fulltext/`
 - `fulltext/fulltext_download_log.csv`
 - `fulltext_recovery_summary.md`
 - `outputs/<corrida>/fulltext/review_text/`

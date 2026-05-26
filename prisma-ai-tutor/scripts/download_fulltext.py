@@ -406,6 +406,12 @@ def write_summary(path: Path, output_dir: Path, rows: list[dict[str, str]]) -> N
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def infer_run_dir(output_dir: Path, summary_path: Path) -> Path:
+    if summary_path.parent.name == "fulltext":
+        return summary_path.parent.parent
+    return output_dir.parent
+
+
 def main() -> int:
     args = parse_args()
     config_file = Path(args.config_file).expanduser().resolve() if args.config_file else None
@@ -419,12 +425,12 @@ def main() -> int:
     log_path = (
         resolve_workspace_path(args.log, config_file, env_values)
         if args.log
-        else decisions_path.parent.parent / "fulltext" / "fulltext_download_log.csv"
+        else output_dir.parent / "fulltext" / "fulltext_download_log.csv"
     )
     summary_path = (
         resolve_workspace_path(args.summary, config_file, env_values)
         if args.summary
-        else decisions_path.parent.parent / "fulltext" / "fulltext_recovery_summary.md"
+        else output_dir.parent / "fulltext" / "fulltext_recovery_summary.md"
     )
     cookies_path = (
         resolve_workspace_path(args.cookies_file, config_file, env_values)
@@ -498,7 +504,7 @@ def main() -> int:
 
     write_log(log_path, results)
     write_summary(summary_path, output_dir, results)
-    refresh_run_outputs(summary_path.parent.parent)
+    refresh_run_outputs(infer_run_dir(output_dir, summary_path))
     downloaded = sum(1 for row in results if row["status"].startswith("downloaded_"))
     print(f"Downloaded {downloaded} files to: {output_dir}")
     print(f"Included decisions: {', '.join(sorted(allowed_decisions))}")

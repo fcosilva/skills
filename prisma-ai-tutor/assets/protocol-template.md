@@ -23,7 +23,7 @@ Nota de navegación:
 
 ## Fuentes de información
 
-- OpenAlex, DOAJ, Redalyc
+- OpenAlex, DOAJ, Semantic Scholar, Redalyc
 - Scopus si existe acceso institucional o CSV exportado
 - PubMed si el tema tiene pertinencia biomédica o de salud
 - SciELO, Redalyc 

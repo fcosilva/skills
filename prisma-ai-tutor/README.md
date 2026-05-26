@@ -56,12 +56,14 @@ skills/
     │   ├── database-selection-guide.md
     │   ├── doaj-automation.md
     │   ├── openalex-automation.md
-    │   └── redalyc-automation.md
+    │   ├── script-inventory.md
+    │   └── semanticscholar-automation.md
     ├── scripts/
     │   ├── openalex_search.py
     │   ├── scielo_search.py
     │   ├── doaj_search.py
     │   ├── redalyc_search.py
+    │   ├── semanticscholar_search.py
     │   ├── apply_screening_decisions.py
     │   ├── validate_fulltext_access.py
     │   └── ...
@@ -77,7 +79,9 @@ Documentos de apoyo dentro del propio skill:
 - [guides/automation-by-phases.md](guides/automation-by-phases.md)
 - [guides/openalex-automation.md](guides/openalex-automation.md)
 - [guides/doaj-automation.md](guides/doaj-automation.md)
+- [guides/semanticscholar-automation.md](guides/semanticscholar-automation.md)
 - [guides/redalyc-automation.md](guides/redalyc-automation.md)
+- [guides/script-inventory.md](guides/script-inventory.md)
 - [guides/database-selection-guide.md](guides/database-selection-guide.md)
 - carpeta de casos reales: [cases](../../../cases)
 - scripts de automatización: [scripts](scripts)
@@ -283,13 +287,14 @@ Limitación actual:
 
 ## Automatización de fuentes programáticas
 
-La automatización abierta actual del agente se apoya sobre todo en `OpenAlex`, `DOAJ` y, cuando existe `API key`, `Redalyc`.
+La automatización abierta actual del agente se apoya sobre todo en `OpenAlex`, `DOAJ`, `Semantic Scholar` y, cuando existe `API key`, `Redalyc`.
 
 Scripts principales:
 
 - [scripts/openalex_search.py](scripts/openalex_search.py)
 - [scripts/scielo_search.py](scripts/scielo_search.py)
 - [scripts/doaj_search.py](scripts/doaj_search.py)
+- [scripts/semanticscholar_search.py](scripts/semanticscholar_search.py)
 - [scripts/redalyc_search.py](scripts/redalyc_search.py)
 - [scripts/merge_search_results.py](scripts/merge_search_results.py)
 - [scripts/apply_screening_decisions.py](scripts/apply_screening_decisions.py)
@@ -311,6 +316,14 @@ Estado actual de DOAJ:
 - devuelve metadata especialmente útil para el cribado por `titulo + resumen`, incluyendo abstract, DOI, revista, idioma y enlace a full text;
 - por ahora aplica filtros de año de forma local sobre los resultados recuperados.
 
+Estado actual de Semantic Scholar:
+
+- `semanticscholar_search.py` consulta la Semantic Scholar Graph API;
+- escribe sus artefactos en `search/semanticscholar/` dentro de la corrida;
+- se usa como fuente semántica complementaria por defecto;
+- devuelve metadata útil para cribado por `titulo + resumen`, incluyendo abstract, DOI, autores, año, tipo de publicación, conteo de citas, URL de Semantic Scholar y `openAccessPdf` cuando está disponible;
+- no debe tratarse como búsqueda booleana estricta ni como búsqueda formal por campo `title/abstract/keywords`.
+
 Estado actual de Redalyc:
 
 - `redalyc_search.py` consulta la API documentada de Redalyc con `API key`;
@@ -321,7 +334,7 @@ Estado actual de Redalyc:
 
 Integración multi-fuente:
 
-- cuando un caso use dos o más fuentes programáticas, la recomendación es recuperar cada una en su subcarpeta (`search/openalex/`, `search/doaj/`, `search/redalyc/`, etc.) y luego fusionarlas antes del cribado común;
+- cuando un caso use dos o más fuentes programáticas, la recomendación es recuperar cada una en su subcarpeta (`search/openalex/`, `search/doaj/`, `search/semanticscholar/`, `search/redalyc/`, etc.) y luego fusionarlas antes del cribado común;
 - el script inicial para esa fusión es [scripts/merge_search_results.py](scripts/merge_search_results.py);
 - la política actual de deduplicación es:
   - primero por DOI exacto normalizado;

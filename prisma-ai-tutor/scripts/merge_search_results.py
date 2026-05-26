@@ -26,7 +26,7 @@ from openalex_search import (
 from run_outputs import refresh_run_outputs
 
 
-DEFAULT_SOURCES = ["openalex", "doaj"]
+DEFAULT_SOURCES = ["openalex", "doaj", "semanticscholar", "redalyc"]
 
 
 @dataclass
@@ -61,8 +61,9 @@ def parse_args() -> MergeConfig:
         action="append",
         dest="sources",
         help=(
-            "Source folder to include under search/<source>/, for example openalex, doaj, scielo. "
-            "Repeat the flag to include more than one source. Default: openalex + doaj."
+            "Source folder to include under search/<source>/, for example openalex, doaj, semanticscholar, redalyc. "
+            "Repeat the flag to include more than one source. "
+            "Default: openalex + doaj + semanticscholar + redalyc."
         ),
     )
     parser.add_argument(

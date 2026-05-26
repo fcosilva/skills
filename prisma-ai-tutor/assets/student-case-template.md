@@ -124,7 +124,7 @@ Obligatoria para pasar a la Fase 3 en el flujo formal.
 - Exigir artículos revisados por pares como criterio metodológico: [[sí / no]]
 - `max_results` objetivo: [[...]]
 - Umbral operativo de muestra: [[500 / otro]]
-- Fuentes activas para Fase 3: [[openalex / doaj / redalyc / combinación]]
+- Fuentes activas para Fase 3: [[openalex / doaj / semanticscholar / redalyc / combinación]]
 
 Nota:
 
