@@ -7,6 +7,7 @@ Regla práctica:
 - no crear scripts nuevos para tareas ya cubiertas por esta tabla;
 - si falta una capacidad del flujo, documentar la brecha antes de crear una utilidad temporal;
 - cualquier script temporal debe quedar fuera del flujo oficial y no debe reemplazar los artefactos esperados del skill.
+- durante una corrida de caso, no editar scripts del skill; reportar bugs o solicitudes de cambio en `cases/<slug>/agent_reports/`.
 
 | Script | Fase principal | Para qué sirve | Entradas clave | Salidas esperadas |
 |---|---|---|---|---|

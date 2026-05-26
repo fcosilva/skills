@@ -43,6 +43,7 @@ skills/
     │   ├── extraction-summary.md
     │   ├── metadata-columns.yaml
     │   ├── base.env.template
+    │   ├── agent-report-template.md
     │   ├── case.env.template
     │   ├── protocol-template.md
     │   ├── quality-matrix.md
@@ -85,6 +86,22 @@ Documentos de apoyo dentro del propio skill:
 - [guides/database-selection-guide.md](guides/database-selection-guide.md)
 - carpeta de casos reales: [cases](../../../cases)
 - scripts de automatización: [scripts](scripts)
+
+## Reportes de agentes
+
+Durante una corrida de caso, el agente no debe modificar archivos del skill ni scripts del core metodológico.
+
+Si detecta un bug, una brecha de flujo o una necesidad de cambio, debe crear un reporte en:
+
+```text
+cases/<slug>/agent_reports/
+```
+
+Plantilla sugerida:
+
+- [assets/agent-report-template.md](assets/agent-report-template.md)
+
+`outputs/<corrida>/` queda reservado para artefactos metodológicos de la revisión; `agent_reports/` pertenece al expediente del caso y sirve para mantenimiento posterior del skill.
 
 ## Configuracion recomendada
 

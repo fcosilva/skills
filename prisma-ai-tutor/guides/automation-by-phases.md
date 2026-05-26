@@ -23,6 +23,7 @@ Si el agente necesita hacer trabajo adicional:
 
 - puede preparar insumos de la siguiente fase;
 - pero no debe aplicar esa fase todavía sobre los artefactos del caso hasta cerrar formalmente la fase actual.
+- no debe modificar archivos del skill durante una corrida de caso; si detecta un bug o brecha, debe reportarlo en `cases/<slug>/agent_reports/`.
 
 ## Artefactos del flujo
 
@@ -62,6 +63,30 @@ Regla práctica:
 - todos esos placeholders y artefactos derivados deben quedar dentro del mismo `outputs/<corrida>/`;
 - el agente no debe crear ni actualizar artefactos del caso en `outputs/` raíz;
 - antes de escribir artefactos manuales o automatizados, el agente debe validar que la ruta destino incluya explícitamente `outputs/<corrida>/`.
+
+## Reportes de agente
+
+Los reportes sobre fallas del skill no son salidas metodológicas de la revisión. Deben guardarse en el expediente del caso:
+
+```text
+cases/<slug>/agent_reports/
+```
+
+Usa nombres explícitos, por ejemplo:
+
+- `bug_YYYY-MM-DD.md`
+- `flow_gap_YYYY-MM-DD.md`
+- `script_change_request_YYYY-MM-DD.md`
+- `run_notes_YYYY-MM-DD.md`
+
+Contenido mínimo:
+
+- fase en la que ocurrió;
+- artefactos afectados;
+- comportamiento observado;
+- comportamiento esperado;
+- workaround aplicado, si existió;
+- recomendación para mantenimiento del skill.
 
 ## Fases recomendadas
 

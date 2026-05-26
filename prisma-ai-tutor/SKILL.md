@@ -46,6 +46,15 @@ Antes de crear scripts nuevos o usar `scratch/`, el agente debe revisar `guides/
 - Si necesita una utilidad temporal, debe explicar por qué no alcanza con los scripts existentes y no debe convertirla en artefacto oficial del flujo.
 - El cribado `initial` y `focused` lo propone el agente; el usuario revisa, corrige o aprueba, pero no debe recibir como tarea inicial hacer el filtrado que corresponde al agente.
 
+## Regla sobre mantenimiento del skill durante una corrida
+
+Durante la ejecución de un caso, el agente no debe modificar archivos del skill ni scripts del core metodológico.
+
+- Si detecta un bug, una brecha de flujo o una necesidad de cambio parametrizable, debe crear un reporte en `cases/<slug>/agent_reports/`.
+- El reporte debe distinguir entre bug, solicitud de mejora, workaround aplicado y riesgo metodológico.
+- El agente puede continuar solo si existe un workaround seguro que no modifique el core del skill ni altere la trazabilidad.
+- Las correcciones del skill deben revisarse en un flujo de mantenimiento separado.
+
 ## Regla de secuencialidad
 
 Las fases del skill son estrictamente secuenciales.

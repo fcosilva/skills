@@ -98,11 +98,11 @@ def is_zotero_screening_notes_complete(run_dir: Path) -> bool:
     for notes_summary_path in summary_candidates:
         notes_summary = read_json(notes_summary_path) or {}
         actions = notes_summary.get("actions")
-        if isinstance(actions, list) and any(action.get("phase") == "screening" for action in actions):
+        if isinstance(actions, list) and any(action.get("phase") in ("screening", "extraction", "quality") for action in actions):
             return True
     for notes_actions_path in actions_candidates:
         rows = read_csv_rows(notes_actions_path)
-        if any(row.get("phase", "").strip() == "screening" for row in rows):
+        if any(row.get("phase", "").strip() in ("screening", "extraction", "quality") for row in rows):
             return True
     return False
 
