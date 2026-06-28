@@ -82,6 +82,7 @@ Abre los artefactos en este orden:
 
 - `synthesis/narrative_synthesis.md`
 - `synthesis/final_audit.md`
+- `synthesis/informe_final.md` (solo con confirmación humana)
 
 ## Decisiones y autorizaciones relevantes
 

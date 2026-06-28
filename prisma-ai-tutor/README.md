@@ -56,6 +56,7 @@ skills/
     │   ├── automation-by-phases.md
     │   ├── database-selection-guide.md
     │   ├── doaj-automation.md
+    │   ├── lens-automation.md
     │   ├── openalex-automation.md
     │   ├── script-inventory.md
     │   └── semanticscholar-automation.md
@@ -63,6 +64,7 @@ skills/
     │   ├── openalex_search.py
     │   ├── scielo_search.py
     │   ├── doaj_search.py
+    │   ├── lens_search.py
     │   ├── redalyc_search.py
     │   ├── semanticscholar_search.py
     │   ├── apply_screening_decisions.py
@@ -81,6 +83,7 @@ Documentos de apoyo dentro del propio skill:
 - [guides/openalex-automation.md](guides/openalex-automation.md)
 - [guides/doaj-automation.md](guides/doaj-automation.md)
 - [guides/semanticscholar-automation.md](guides/semanticscholar-automation.md)
+- [guides/lens-automation.md](guides/lens-automation.md)
 - [guides/redalyc-automation.md](guides/redalyc-automation.md)
 - [guides/script-inventory.md](guides/script-inventory.md)
 - [guides/database-selection-guide.md](guides/database-selection-guide.md)
@@ -306,7 +309,7 @@ Limitación actual:
 
 ## Automatización de fuentes programáticas
 
-La automatización abierta actual del agente se apoya sobre todo en `OpenAlex`, `DOAJ`, `Semantic Scholar` y, cuando existe `API key`, `Redalyc`.
+La automatización abierta actual del agente se apoya sobre todo en `OpenAlex`, `DOAJ`, `Semantic Scholar`, `Lens` y, cuando existe `API key`, `Redalyc`.
 
 Scripts principales:
 
@@ -314,6 +317,7 @@ Scripts principales:
 - [scripts/scielo_search.py](scripts/scielo_search.py)
 - [scripts/doaj_search.py](scripts/doaj_search.py)
 - [scripts/semanticscholar_search.py](scripts/semanticscholar_search.py)
+- [scripts/lens_search.py](scripts/lens_search.py)
 - [scripts/redalyc_search.py](scripts/redalyc_search.py)
 - [scripts/merge_search_results.py](scripts/merge_search_results.py)
 - [scripts/apply_screening_decisions.py](scripts/apply_screening_decisions.py)
@@ -343,6 +347,15 @@ Estado actual de Semantic Scholar:
 - devuelve metadata útil para cribado por `titulo + resumen`, incluyendo abstract, DOI, autores, año, tipo de publicación, conteo de citas, URL de Semantic Scholar y `openAccessPdf` cuando está disponible;
 - no debe tratarse como búsqueda booleana estricta ni como búsqueda formal por campo `title/abstract/keywords`.
 
+Estado actual de Lens:
+
+- `lens_search.py` consulta Lens Scholarly API con `API key`;
+- escribe sus artefactos en `search/lens/` dentro de la corrida;
+- se usa como fuente programática opcional activada cuando existe acceso académico aprobado;
+- devuelve metadata útil para cribado por `titulo + resumen`, incluyendo abstract, DOI, autores, año, tipo de publicación, fuente, Lens ID y otros IDs externos cuando están disponibles;
+- puede usar booleanos simples mediante `query_string` sobre `title` y `abstract`;
+- su solapamiento con otras fuentes se controla mediante la fusión y deduplicación de Fase 3.
+
 Estado actual de Redalyc:
 
 - `redalyc_search.py` consulta la API documentada de Redalyc con `API key`;
@@ -353,7 +366,7 @@ Estado actual de Redalyc:
 
 Integración multi-fuente:
 
-- cuando un caso use dos o más fuentes programáticas, la recomendación es recuperar cada una en su subcarpeta (`search/openalex/`, `search/doaj/`, `search/semanticscholar/`, `search/redalyc/`, etc.) y luego fusionarlas antes del cribado común;
+- cuando un caso use dos o más fuentes programáticas, la recomendación es recuperar cada una en su subcarpeta (`search/openalex/`, `search/doaj/`, `search/semanticscholar/`, `search/lens/`, `search/redalyc/`, etc.) y luego fusionarlas antes del cribado común;
 - el script inicial para esa fusión es [scripts/merge_search_results.py](scripts/merge_search_results.py);
 - la política actual de deduplicación es:
   - primero por DOI exacto normalizado;
@@ -382,6 +395,7 @@ Artefactos típicos por corrida:
 - `zotero/zotero_summary.md`
 - `synthesis/narrative_synthesis.md`
 - `synthesis/final_audit.md`
+- `synthesis/informe_final.md` solo si el estudiante o docente confirma su generación.
 
 ## Metadata generada
 

@@ -131,12 +131,13 @@ Acción:
 Modo multi-fuente recomendado:
 
 - si el caso activa más de una fuente, Fase 2 debe producir una `query` por fuente;
-- no asumas que la sintaxis exacta puede reutilizarse sin cambios entre `OpenAlex`, `DOAJ`, `Semantic Scholar`, `PubMed`, `Scopus` y `Redalyc`;
+- no asumas que la sintaxis exacta puede reutilizarse sin cambios entre `OpenAlex`, `DOAJ`, `Semantic Scholar`, `Lens`, `PubMed`, `Scopus` y `Redalyc`;
 - parte de una estrategia conceptual comun, pero traduce cada version al comportamiento real de la fuente;
 - deja visible la version aprobada en:
   - `search/openalex/query.txt`
   - `search/doaj/query.txt`
   - `search/semanticscholar/query.txt`
+  - `search/lens/query.txt`
   - `search/pubmed/query.txt` si el tema tiene pertinencia biomédica o de salud
   - `search/scopus/query.txt` si el caso incorpora Scopus
   - `search/redalyc/query.txt`
@@ -152,6 +153,7 @@ Reglas operativas:
 - en `DOAJ`, el filtro por año se aplica localmente, así que la query no necesita forzar esa sintaxis si la fuente no la soporta de forma equivalente;
 - en `OpenAlex`, conviene distinguir entre la parte textual de la query y los filtros técnicos del `.env`.
 - en `Semantic Scholar`, usa una frase semántica natural; no la presentes como query booleana estricta ni como búsqueda por campo `title/abstract/keywords`;
+- en `Lens`, usa una query `query_string` con booleanos simples sobre `title` y `abstract`;
 - en `PubMed`, usa sintaxis propia de PubMed, preferentemente con campos `[Title/Abstract]`;
 - si el tema está claramente relacionado con salud, medicina, biomedicina, bioética, educación médica o IA en salud, el agente debe proponer PubMed como fuente especializada.
 - si Scopus está activo con `SCOPUS_MODE=manual_csv`, esta fase debe terminar con una pausa operativa: el usuario debe buscar manualmente en Scopus con `search/scopus/query.txt`, exportar CSV, guardar el archivo en el workspace y completar `SCOPUS_CSV_FILE` antes de autorizar Fase 3.
@@ -190,6 +192,7 @@ Entrada:
 - archivo de configuración disponible y validado por el estudiante
 - parámetros de OpenAlex
 - API key de Semantic Scholar recomendada si la fuente está activa, para evitar errores `429`
+- API key de Lens obligatoria si la fuente está activa
 - si Scopus usa `manual_csv`, CSV exportado desde Scopus ya disponible y declarado en `SCOPUS_CSV_FILE`
 
 Acción:
@@ -212,9 +215,9 @@ Script orquestador recomendado para esta modalidad:
 
 Configuración mínima recomendada en `case.env`:
 
-- `PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,redalyc`
-- si el tema requiere PubMed: `PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,pubmed,redalyc`
-- si el caso incorpora Scopus: `PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,scopus,redalyc`
+- `PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,lens,redalyc`
+- si el tema requiere PubMed: `PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,lens,pubmed,redalyc`
+- si el caso incorpora Scopus: `PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,lens,scopus,redalyc`
 - `PRISMA_PHASE3_AUTO_MERGE=true`
 - todos los `*_OUT_DIR` activos deben apuntar al mismo `outputs/<corrida>`
 
@@ -281,6 +284,7 @@ Nota:
   - `search/openalex/`
   - `search/doaj/`
   - `search/semanticscholar/`
+  - `search/lens/`
   - `search/pubmed/`
   - `search/scopus/`
   - `search/redalyc/`
@@ -591,14 +595,17 @@ Acción:
 - redactar la sintesis narrativa
 - declarar limites del corpus y del proceso
 - revisar trazabilidad final
+- pedir confirmacion humana antes de generar el informe final integrado
 
 Salida:
 
 - sintesis narrativa
 - auditoria o checklist de cierre
+- informe final integrado, solo con autorizacion humana explicita
 
 Pausa:
 
+- confirmar si se genera `synthesis/informe_final.md`
 - confirmar cierre del caso o necesidad de nueva corrida
 
 ## Reglas de operación sugeridas para el skill

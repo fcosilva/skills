@@ -17,7 +17,8 @@ Para esta asignatura se recomienda exigir:
 1. `OpenAlex` como fuente abierta obligatoria.
 2. `DOAJ` como fuente abierta curada y reproducible.
 3. `Semantic Scholar` como fuente semántica complementaria por defecto.
-4. `Redalyc` como fuente regional programática cuando exista API key.
+4. `Lens` como fuente programática opcional cuando exista API key académica aprobada.
+5. `Redalyc` como fuente regional programática cuando exista API key.
 
 Opcionales:
 
@@ -31,6 +32,7 @@ Opcionales:
 |---|---|---|---|---|---|
 | OpenAlex | Abierta | API abierta | `240M+` works en la documentación técnica; `474M+` a `477M+` scholarly works en la ayuda institucional | Artículos, libros, datasets, tesis y otros trabajos académicos | Reproducibilidad, automatización y acceso abierto |
 | Semantic Scholar | Abierta | API abierta con key recomendada | Cobertura amplia de literatura académica indexada por Semantic Scholar | Artículos, conferencias y otros trabajos académicos con búsqueda por relevancia semántica | Sensibilidad temática y recuperación complementaria |
+| Lens | Académica / institucional | API con token aprobado | Cobertura amplia de literatura académica y conexiones con patentes en la plataforma Lens | Artículos y otros trabajos académicos; también ecosistema de patentes en Lens | Recuperación programática adicional e IDs externos útiles para deduplicación |
 | Scopus | Comercial | Suscripción y APIs oficiales | `100M+` records | Revistas, preprints, libros y actas de conferencias | Curación fuerte y prestigio académico |
 | Web of Science Core Collection | Comercial | Suscripción y APIs oficiales | `97M+` records conectados; la plataforma completa reporta `271M+` records | Revistas arbitradas, proceedings y libros académicos | Alta confianza editorial, pero acceso operativo restringido |
 | Dimensions | Comercial / institucional | Plataforma y API bajo licencia; versión gratuita limitada | `140M+` publications en la versión gratuita; otras páginas del proveedor reportan `160M+` global publications | Publicaciones, datasets, grants, patents, policy y más | Vista conectada del ecosistema de investigación |
@@ -43,6 +45,7 @@ Opcionales:
 |---|---|---|---|
 | OpenAlex | Abierta, automatizable, transparente y reproducible | Metadatos heterogéneos según la fuente de origen | Obligatoria como base abierta |
 | Semantic Scholar | Búsqueda semántica, abstracts y PDFs OA cuando están disponibles | No ofrece sintaxis booleana estricta ni búsqueda formal por title/abstract/keywords | Fuente complementaria por defecto para aumentar sensibilidad |
+| Lens | API estructurada, búsqueda en título/resumen, buenos IDs externos como DOI, PubMed y OpenAlex cuando aparecen | Requiere API key aprobada; cobertura y campos dependen del registro | Opcional avanzada; activarla cuando el curso o docente tenga key académica disponible |
 | Scopus | Curación fuerte, prestigio, buena cobertura interdisciplinaria | Acceso restringido por licencia | Condicionada a acceso institucional, CSV o API suficiente |
 | Web of Science | Selección editorial muy exigente, buena trazabilidad | Acceso restringido incluso para búsqueda web; menor viabilidad en aula sin suscripción | No recomendado para el flujo por defecto; usar solo si la institución ya ofrece acceso |
 | Dimensions | Gran riqueza contextual, enlaces con grants y patents, full-text indexing en gran parte de la base | Menor replicabilidad en aula si no todos tienen acceso | Complementaria, no obligatoria |
@@ -90,6 +93,21 @@ Limitación metodológica:
 - no reemplaza las queries por campo de fuentes como PubMed o Scopus;
 - su función es aumentar sensibilidad y descubrir literatura potencialmente relevante, sabiendo que la deduplicación posterior controlará el solapamiento.
 
+### 1c. Fuente programática opcional: Lens
+
+Se incluye cuando existe `API key` académica aprobada porque aporta:
+
+- búsqueda programática sobre `title` y `abstract`;
+- filtros por año, tipo documental y disponibilidad de resumen;
+- identificadores externos útiles para deduplicar, como DOI, PubMed y OpenAlex cuando están disponibles;
+- una vía adicional para temas donde puede interesar la conexión entre literatura académica, innovación y patentes.
+
+Limitación metodológica:
+
+- no debe activarse si no existe `LENS_API_KEY`;
+- no reemplaza OpenAlex, DOAJ ni Semantic Scholar como base del flujo reproducible de baja fricción;
+- `LENS_PUBLICATION_TYPE=journal article` ayuda a filtrar, pero no sustituye la verificación humana de pertinencia y revisión por pares.
+
 ## 2. Fuente comercial: Scopus
 
 Se recomienda porque aporta:
@@ -117,12 +135,12 @@ Para el uso real del skill conviene distinguir entre valor metodológico y madur
 - `Redalyc` sí expone una API documentada y requiere `API key` para las búsquedas;
 - en pruebas reales con clave válida, `Redalyc` ya devolvió registros JSON con `título`, `autores`, `dc_description` como resumen cuando está disponible, `año`, `tipo documental`, `idioma`, `fuente` y referencia al `PDF`;
 - la API documentada no expone un filtro directo por resumen, así que su recuperación se parece más a `title + filtros metadata` que a una búsqueda simétrica por `título + abstract`;
-- por eso, en el estado actual del skill, `OpenAlex`, `DOAJ` y `Semantic Scholar` son fuentes abiertas activas, `Redalyc` es la fuente regional programática activa cuando hay API key, y `SciELO` permanece como fuente regional semiasistida o experimental.
+- por eso, en el estado actual del skill, `OpenAlex`, `DOAJ`, `Semantic Scholar` y `Lens` son fuentes programáticas activas cuando hay credenciales suficientes, `Redalyc` es la fuente regional programática activa cuando hay API key, y `SciELO` permanece como fuente regional semiasistida o experimental.
 
 Implicación pedagógica:
 
 - si el objetivo principal del trabajo es comparar cobertura regional como fenómeno metodológico, `SciELO` y `Redalyc` siguen siendo relevantes aunque su automatización sea parcial;
-- si el objetivo principal es ejecutar una corrida reproducible y automatizable con baja fricción, hoy conviene apoyarse primero en `OpenAlex`, `DOAJ`, `Semantic Scholar` y `Redalyc` cuando haya API key.
+- si el objetivo principal es ejecutar una corrida reproducible y automatizable con baja fricción, hoy conviene apoyarse primero en `OpenAlex`, `DOAJ`, `Semantic Scholar`, `Lens` y `Redalyc` cuando existan las API keys necesarias.
 
 ## Nota sobre cifras de cobertura
 
@@ -142,6 +160,8 @@ Por eso, estas cifras deben leerse como una referencia comparativa general, no c
 - OpenAlex about us: https://help.openalex.org/hc/en-us/articles/24396686889751-About-us
 - Semantic Scholar API product page: https://www.semanticscholar.org/product/api
 - Semantic Scholar Graph API docs: https://api.semanticscholar.org/api-docs/graph
+- Lens API docs: https://docs.api.lens.org/
+- Lens API getting started: https://docs.api.lens.org/getting-started.html
 - Scopus product page: https://www.elsevier.com/products/scopus
 - Scopus content page: https://www.elsevier.com/en-gb/products/scopus/content
 - Dimensions free version: https://www.dimensions.ai/products/all-products/dimensions-free-version/

@@ -1,208 +1,301 @@
-# Flujo de trabajo
+# Flujo de trabajo consolidado
 
-## Fase 1. Diagnóstico del tema
+Este documento resume el flujo conceptual vigente de `PRISMA-AI Tutor`.
+
+Uso recomendado:
+
+- usa este archivo para entender o auditar la lógica metodológica de cada fase;
+- usa `guides/automation-by-phases.md` para comandos, scripts, artefactos detallados y pausas operativas;
+- si hay conflicto entre ambos documentos, prevalece `guides/automation-by-phases.md` como guía operativa.
+
+## Principios transversales
+
+- Las fases son secuenciales: no se ejecutan en paralelo ni se saltan sin cierre explícito.
+- Toda decisión de inclusión o exclusión debe tener criterio y justificación.
+- El agente propone cribados y síntesis, pero el corpus final requiere confirmación humana.
+- `initial` y `focused` se basan principalmente en título, resumen y metadatos.
+- La selección final solo puede incluir estudios con texto completo accesible y legible.
+- La extracción, calidad, síntesis e informe final ocurren solo después del corpus final confirmado.
+
+## Fase 1. Delimitación del tema
 
 Objetivo:
 
-- Identificar si el tema es viable como mini revisión sistemática.
-
-Evalúa si el tema es:
-
-- Viable.
-- Demasiado amplio.
-- Mejor para revisión narrativa.
-- Mejor para investigación empírica.
-- Necesitado de delimitación.
+- evaluar si el tema es viable como mini revisión sistemática formativa;
+- delimitar población/problema, intervención o fenómeno de interés, contexto y alcance.
 
 Salida esperada:
 
-- Diagnóstico.
-- Tema delimitado.
-- Pregunta de revisión sugerida.
-- Objetivo.
-- Palabras clave.
-- Advertencias.
-- Siguiente paso.
+- diagnóstico de viabilidad;
+- tema delimitado;
+- pregunta preliminar;
+- objetivo preliminar;
+- palabras clave iniciales;
+- advertencias de alcance.
 
-## Fase 2. Formulación de la pregunta
+## Fase 2. Construcción y validación de la estrategia de búsqueda
 
 Objetivo:
 
-- Proponer una pregunta clara, investigable y coherente con el alcance del curso.
+- formular la pregunta de revisión y traducirla en queries por fuente.
+
+Debe incluir:
+
+- pregunta de revisión recomendada;
+- criterios de inclusión y exclusión;
+- periodo, idiomas y tipos documentales;
+- fuentes activas;
+- query adaptada por fuente;
+- aprobación humana antes de ejecutar búsquedas.
+
+Regla clave:
+
+- si hay varias fuentes, no se debe asumir que una misma sintaxis sirve para todas.
+- cada fuente debe tener su propio `search/<fuente>/query.txt`.
+
+## Fase 3. Búsqueda automatizada multi-fuente
+
+Objetivo:
+
+- ejecutar las fuentes activas, normalizar resultados y preparar la matriz común.
+
+Fuentes programáticas habituales:
+
+- `OpenAlex`;
+- `DOAJ`;
+- `Semantic Scholar`;
+- `Lens`, si existe `LENS_API_KEY`;
+- `Redalyc`, si existe API key;
+- `PubMed`, cuando el tema es biomédico o de salud;
+- `Scopus`, cuando hay API suficiente o CSV manual configurado.
+
+Salida esperada:
+
+- `search/<fuente>/raw_results.json`;
+- `search/<fuente>/normalized_results.json`;
+- `search/<fuente>/normalized_results.csv`;
+- `search/<fuente>/search_log.md`;
+- `search/<fuente>/summary.json`;
+- `search/merged_normalized_results.*` cuando hay más de una fuente;
+- `search/source_merge_log.*`;
+- `screening/screening_matrix.*`.
+
+Regla clave:
+
+- si hay más de una fuente, se fusiona y deduplica al cierre de Fase 3 antes de cualquier cribado.
+
+## Fase 4. Cribado inicial
+
+Objetivo:
+
+- separar ruido evidente de señal potencial.
+
+Base de decisión:
+
+- título;
+- resumen;
+- metadatos básicos.
+
+Salida esperada:
+
+- `screening/screening_decisions_initial.csv`;
+- `screening/screening_summary_initial.md`;
+- matriz actualizada.
+
+Regla clave:
+
+- el agente propone el cribado inicial; el usuario revisa, corrige o aprueba.
+
+## Fase 5. Cribado focused
+
+Objetivo:
+
+- reevaluar solo los registros `Incluir` y `Dudoso` del cribado inicial.
+
+Base de decisión:
+
+- título;
+- resumen;
+- metadatos básicos;
+- mayor exigencia de alineación temática y metodológica.
+
+Salida esperada:
+
+- `screening/screening_decisions_focused.csv`;
+- `screening/screening_summary_focused.md`;
+- matriz actualizada.
+
+Regla clave:
+
+- todavía no es selección final; no debe cerrarse el corpus sin revisar accesibilidad y texto completo.
+
+## Fase 6. Validación de accesibilidad y recuperación local de texto completo
+
+Objetivo:
+
+- verificar accesibilidad a texto completo;
+- descargar PDF/HTML solo después de autorización;
+- preparar texto crudo legible para la selección final.
+
+Secuencia recomendada:
+
+- verificar accesibilidad sin descarga masiva;
+- actualizar matriz;
+- pedir autorización para descargar;
+- descargar PDF/HTML accesibles;
+- extraer texto plano desde PDF/HTML útiles.
+
+Salida esperada:
+
+- `fulltext/fulltext_access_validation.*`;
+- `fulltext/fulltext_download_log.csv`;
+- `fulltext/fulltext_recovery_summary.md`;
+- `fulltext/review_text/`;
+- `fulltext/fulltext_review_text_log.csv`;
+- `fulltext/fulltext_review_text_summary.md`.
+
+Regla clave:
+
+- descargar no equivale a leer; la lectura asistida requiere texto completo legible o HTML/PDF procesable.
+
+## Fase 7. Selección final o evaluación de elegibilidad
+
+Objetivo:
+
+- cerrar el corpus antes de extracción.
+
+Base de decisión:
+
+- texto completo accesible y legible;
+- criterios de inclusión/exclusión;
+- observaciones de elegibilidad.
+
+Salida esperada:
+
+- `screening/screening_decisions_final.csv`;
+- `screening/screening_summary_final.md`;
+- matriz actualizada con base de selección final.
+
+Regla clave:
+
+- un estudio sin texto completo accesible no entra al corpus final.
+- el cierre real ocurre solo cuando el estudiante o docente confirma humanamente el corpus.
+
+## Fase 8. Integración bibliográfica en Zotero
+
+Objetivo:
+
+- preservar el corpus final confirmado en Zotero y crear trazabilidad mínima por ítem.
+
+Entrada:
+
+- corpus final confirmado;
+- configuración Zotero completa;
+- rutas vigentes en `case.env`.
+
+Salida esperada:
+
+- paquete de importación;
+- resumen de sincronización;
+- acciones Zotero;
+- nota hija mínima de `screening` por cada ítem.
+
+Regla clave:
+
+- la fase no cierra solo porque los ítems existan en Zotero; también debe existir la nota mínima de trazabilidad.
+
+## Fase 9. Extracción de evidencia
+
+Objetivo:
+
+- extraer datos verificables desde el texto completo del corpus final.
+
+Debe registrar:
+
+- autor/año;
+- título;
+- objetivo;
+- método;
+- contexto;
+- muestra o corpus;
+- tecnología o fenómeno estudiado;
+- hallazgos principales;
+- limitaciones;
+- relevancia para la pregunta.
+
+Salida esperada:
+
+- `extraction/extraction_matrix.md`;
+- `extraction/extraction_summary.md`;
+- notas hijas de extracción en Zotero cuando corresponda.
+
+Regla clave:
+
+- si un dato no aparece en el texto revisado, se escribe `No reportado`.
+
+## Fase 10. Evaluación de calidad
+
+Objetivo:
+
+- valorar calidad metodológica básica y riesgos de interpretación.
+
+Criterios mínimos:
+
+- objetivo claro;
+- método claro;
+- datos suficientes;
+- contexto o muestra descrita;
+- limitaciones reconocidas.
+
+Salida esperada:
+
+- `quality/quality_matrix.md`;
+- `quality/quality_summary.md`;
+- notas hijas de calidad en Zotero cuando corresponda.
+
+Regla clave:
+
+- la calidad no elimina automáticamente estudios; ayuda a interpretar el peso de la evidencia.
+
+## Fase 11. Síntesis narrativa, auditoría e informe final
+
+Objetivo:
+
+- integrar evidencia;
+- declarar límites;
+- revisar trazabilidad final;
+- generar el informe final solo si el humano lo confirma.
 
 Acción:
 
-- Proponer máximo tres preguntas.
-- Recomendar una opción principal.
-- Justificar la elección con PICOC adaptado cuando ayude.
+- redactar síntesis narrativa;
+- contrastar hallazgos, coincidencias, diferencias y vacíos;
+- declarar limitaciones del corpus y del proceso;
+- ejecutar auditoría o checklist de cierre;
+- pedir confirmación humana antes de generar `informe_final.md`.
 
-## Fase 3. Protocolo reducido
+Salida esperada:
 
-Objetivo:
+- `synthesis/narrative_synthesis.md`;
+- `synthesis/final_audit.md`;
+- `synthesis/informe_final.md`, solo con autorización humana explícita.
 
-- Convertir el tema en un plan de trabajo trazable.
+Contenido mínimo sugerido para `informe_final.md`:
 
-Debe incluir:
+- título;
+- resumen;
+- introducción;
+- pregunta y objetivo;
+- método resumido;
+- fuentes y estrategia de búsqueda;
+- criterios de inclusión/exclusión;
+- flujo de búsqueda, cribado y selección;
+- caracterización del corpus final;
+- síntesis de hallazgos;
+- evaluación de calidad y limitaciones;
+- declaración de uso de IA;
+- referencias.
 
-- Tema.
-- Pregunta.
-- Objetivo.
-- Fuentes.
-- Periodo de publicación.
-- Idiomas.
-- Tipos de documentos incluidos.
-- Criterios de inclusión.
-- Criterios de exclusión.
-- Variables a extraer.
-- Declaración de uso de IA.
+Regla clave:
 
-Además debe dejar explícito:
-
-- El conjunto mínimo de fuentes exigidas por la asignatura.
-- Los tipos documentales elegibles y no elegibles.
-- La meta de búsqueda inicial.
-- La meta de estudios incluidos en la síntesis final.
-- La extensión esperada del informe.
-- El rango sugerido de referencias totales.
-
-## Fase 4. Búsqueda
-
-Objetivo:
-
-- Proponer una estrategia reproducible.
-
-Debe incluir:
-
-- Palabras clave.
-- Sinónimos.
-- Términos en inglés.
-- Cadenas simples.
-- Cadenas avanzadas.
-- Fuentes académicas pertinentes.
-
-También debe recordar que:
-
-- La estrategia debe cubrir las fuentes mínimas definidas en `references/constraints.md`.
-- Deben priorizarse artículos académicos o científicos arbitrados.
-- No deben contarse tesis ni trabajos de titulación como evidencia elegible.
-- Si la búsqueda inicial queda por debajo del mínimo definido en `references/constraints.md`, debe sugerir ajustes antes de pasar al cribado (selección de estudios), salvo justificación explícita.
-
-Regla:
-
-- No afirmes que encontraste resultados si no se hizo la búsqueda o si el usuario no comparte la evidencia.
-
-## Fase 5. Cribado (selección de estudios)
-
-Entrada:
-
-- Títulos y resúmenes.
-
-Clasificación:
-
-- Incluir.
-- Excluir.
-- Dudoso.
-
-Cada decisión debe indicar:
-
-- Justificación.
-- Criterio de cribado.
-- Qué revisar en texto completo.
-
-Además, vigila que:
-
-- No entren documentos no elegibles según `references/constraints.md`.
-- La cantidad final de estudios incluidos siga siendo viable para una mini revisión sistemática del curso.
-
-Niveles sugeridos de cribado:
-
-- `initial`: primer filtro por título, resumen y metadatos básicos.
-- `focused`: segundo filtro sobre los casos `Incluir` y `Dudoso`, todavía basado sobre todo en resumen, pero con mayor exigencia de alineación temática y metodológica.
-- después de `focused`: validación operativa de accesibilidad y recuperación local del texto completo para el subconjunto priorizado.
-- `final`: selección final antes de la extracción, trabajando solo con estudios que tengan texto completo verificable.
-
-Regla práctica:
-
-- `initial` y `focused` pueden resolverse principalmente con título y abstract;
-- en la redacción de artefactos, `initial` debe describirse como fase basada en `título + resumen + metadatos básicos`, no como una fase de `título + metadatos` solamente;
-- `final` debe apoyarse en texto completo recuperado localmente o en texto completo HTML legible preparado para revisión.
-- si el texto completo no está disponible, el estudio no debe entrar al corpus final; corresponde excluirlo por falta de texto completo o recuperar el documento antes de cerrar la selección.
-
-En la matriz de cribado conviene registrar además:
-
-- `Texto completo accesible`
-- `Base de seleccion final`
-- `Observacion de seleccion final`
-
-## Fase 6. Extracción de evidencia
-
-Entrada:
-
-- Texto completo legible de los estudios incluidos en el corpus final.
-
-Extrae solo:
-
-- Autor/año.
-- Título.
-- Objetivo.
-- Método.
-- Contexto.
-- Muestra o corpus.
-- Tecnología o herramienta.
-- Hallazgos principales.
-- Limitaciones.
-- Relevancia.
-
-Si falta información:
-
-- Escribe `No reportado`.
-
-## Fase 7. Evaluación simple de calidad
-
-Usa esta escala:
-
-| Criterio | Sí | Parcial | No |
-|---|---:|---:|---:|
-| Objetivo claro | 2 | 1 | 0 |
-| Método claro | 2 | 1 | 0 |
-| Datos suficientes | 2 | 1 | 0 |
-| Contexto o muestra descrita | 2 | 1 | 0 |
-| Limitaciones reconocidas | 2 | 1 | 0 |
-
-Interpretación:
-
-| Puntaje | Calidad |
-|---:|---|
-| 8-10 | Alta |
-| 5-7 | Media |
-| 0-4 | Baja |
-
-## Fase 8. Síntesis narrativa
-
-Organiza la síntesis en:
-
-1. Hallazgos principales.
-2. Coincidencias.
-3. Diferencias o contradicciones.
-4. Vacíos de investigación.
-5. Implicaciones para desarrollo de software.
-6. Limitaciones.
-7. Conclusión prudente.
-
-## Fase 9. Auditoría final
-
-Antes de cerrar, revisa:
-
-1. Pregunta clara.
-2. Fuentes identificadas.
-3. Criterios estables.
-4. Matrices con datos verificables.
-5. Evaluación de calidad aplicada.
-6. Declaración de uso de IA incluida.
-7. Conclusiones proporcionales a la evidencia.
-8. Cumplimiento de las fuentes mínimas exigidas por la asignatura.
-9. Inclusión exclusiva de estudios elegibles.
-10. Cumplimiento del mínimo de búsqueda inicial o justificación de excepción.
-11. Cumplimiento del mínimo de estudios incluidos o justificación de excepción.
-12. Coherencia entre estudios incluidos y referencias totales.
-13. Extensión final dentro del rango esperado.
+- el informe final no reemplaza los artefactos de trazabilidad; los integra en un documento legible para entrega académica.

@@ -6,7 +6,7 @@ Semantic Scholar no reemplaza las búsquedas booleanas controladas de otras fuen
 
 ## Rol metodológico
 
-- Se usa en Fase 3 como fuente programática por defecto junto con `OpenAlex`, `DOAJ` y `Redalyc`.
+- Se usa en Fase 3 como fuente programática por defecto junto con `OpenAlex`, `DOAJ`, `Lens` y `Redalyc`.
 - Su query debe redactarse como frase o concepto natural, no como sintaxis booleana estricta.
 - No debe documentarse como búsqueda por campo `title`, `abstract` o `keywords`.
 - Puede devolver `abstract`, DOI, autores, año, tipo de publicación, conteo de citas, URL de Semantic Scholar y PDF OA cuando está disponible.
@@ -44,7 +44,7 @@ No guardes claves reales dentro del repositorio.
 ## Configuración por caso
 
 ```env
-PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,redalyc
+PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,lens,redalyc
 
 SEMANTIC_SCHOLAR_QUERY_FILE=outputs/mi-corrida/search/semanticscholar/query.txt
 SEMANTIC_SCHOLAR_FROM_YEAR=

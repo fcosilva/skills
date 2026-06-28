@@ -28,7 +28,7 @@ Usa este skill cuando el usuario necesite apoyo metodológico para una mini revi
 2. Formula o mejora la pregunta de revisión con base al modelo PICO (Population/Problem, Intervention/interest, Comparison, Outcome)
 3. Propón palabras clave, cadenas de búsqueda y criterios.
 4. Guía el cribado por niveles `initial` y `focused`, y luego la selección final o evaluación de elegibilidad.
-5. Usa `título + resumen` sobre todo en `initial` y `focused`; después valida accesibilidad, recupera los archivos fuente y prepara texto legible para revisión del subconjunto priorizado.
+5. Usa `título + resumen` sobre todo en `initial` y `focused`; después valida accesibilidad (open access), recupera los archivos fuente y prepara texto legible para revisión del subconjunto priorizado.
 6. Pide autorización humana explícita al cerrar Fase 2 antes de ejecutar Fase 3.
 7. Cierra la selección final solo cuando el estudiante o docente confirme humanamente el corpus resultante.
 8. Integra el corpus confirmado en Zotero cuando ya corresponda.
@@ -37,6 +37,7 @@ Usa este skill cuando el usuario necesite apoyo metodológico para una mini revi
 11. Evalúa calidad metodológica básica.
 12. Ayuda a redactar una síntesis narrativa sin exagerar resultados.
 13. Verifica trazabilidad, límites del curso y declaración de uso de IA.
+14. Genera `synthesis/informe_final.md` solo si el estudiante o docente lo confirma explícitamente después de la síntesis y auditoría.
 
 ## Regla sobre scripts auxiliares
 
@@ -76,10 +77,11 @@ Regla operativa para el agente:
 Regla adicional para Fase 3 multi-fuente:
 
 - si el caso declara varias fuentes activas para Fase 3, deben ejecutarse en secuencia dentro de la misma fase;
-- el orden recomendado por defecto es `openalex -> doaj -> semanticscholar -> redalyc`;
-- si el caso incorpora Scopus, ubícalo preferentemente como `openalex -> doaj -> semanticscholar -> scopus -> redalyc`;
-- salvo indicación explícita del usuario, la Fase 3 multi-fuente debe activar `openalex`, `doaj`, `semanticscholar` y `redalyc`;
+- el orden recomendado por defecto es `openalex -> doaj -> semanticscholar -> lens -> redalyc`;
+- si el caso incorpora Scopus, ubícalo preferentemente como `openalex -> doaj -> semanticscholar -> lens -> scopus -> redalyc`;
+- salvo indicación explícita del usuario, la Fase 3 multi-fuente debe activar `openalex`, `doaj`, `semanticscholar`, `lens` y `redalyc`;
 - `semanticscholar` debe usarse como fuente semántica complementaria: su query no es booleana estricta y debe redactarse como frase o concepto natural alineado con el tema;
+- `lens` debe usarse como fuente programática opcional activada cuando exista `LENS_API_KEY`; su query puede usar booleanos simples sobre `title` y `abstract`;
 - si Scopus está activo con `SCOPUS_MODE=manual_csv`, la Fase 3 no debe iniciar hasta que `SCOPUS_CSV_FILE` apunte a un CSV existente exportado desde Scopus;
 - si el tema está relacionado con salud, medicina, biomedicina, bioética, educación médica, publicación científica biomédica o IA en salud, el agente debe proponer agregar `pubmed` como fuente especializada;
 - la fusión debe ocurrir al cierre de Fase 3, antes de cualquier `initial`;
@@ -94,44 +96,44 @@ El agente debe considerar que `ya toca Zotero` solo si se cumplen todas estas co
 1. existe un `final` ya aplicado sobre el caso;
 2. existe un artefacto equivalente a `screening_decisions_final.csv`;
 3. el conjunto final ya fue confirmado manualmente por el estudiante o docente;
-4. la decision final de cada estudio ya quedo justificada;
-5. el archivo `.env` operativo del caso ya contiene la configuracion minima de Zotero.
+4. la decisión final de cada estudio ya quedó justificada;
+5. el archivo `.env` operativo del caso ya contiene la configuración mínima de Zotero.
 
 Si falta cualquiera de esas condiciones, todavia no toca Zotero.
 
-Senales practicas de que si toca Zotero:
+Señales prácticas de que sí toca Zotero:
 
-- el caso ya no esta en `initial`, `focused` o `final` pendiente;
-- la ficha del caso o el protocolo ya reflejan confirmacion humana del corpus;
+- el caso ya no está en `initial`, `focused` o `final` pendiente;
+- la ficha del caso o el protocolo ya reflejan confirmación humana del corpus;
 - el objetivo ya no es seguir cribando sino preservar, organizar y enriquecer el corpus final.
-- el agente puede completar tanto la sincronizacion bibliografica como la nota hija minima de `screening` por cada item.
+- el agente puede completar tanto la sincronización bibliográfica como la nota hija minima de `screening` por cada item.
 
-Senales practicas de que no toca Zotero:
+Señales prácticas de que no toca Zotero:
 
-- el conjunto todavia tiene `Dudoso`;
-- el usuario todavia esta refinando la query;
-- la seleccion final todavia depende de revisar mas texto completo;
-- la configuracion de Zotero sigue incompleta;
-- el usuario todavia no ha validado el corpus final.
-- la sincronizacion bibliografica termino pero las notas hijas obligatorias de `screening` todavia no fueron creadas.
+- el conjunto todavía tiene `Dudoso`;
+- el usuario todavía está refinando la query;
+- la selección final todavía depende de revisar más texto completo;
+- la configuración de Zotero sigue incompleta;
+- el usuario todavía no ha validado el corpus final.
+- la sincronización bibliográfica terminó pero las notas hijas obligatorias de `screening` todavía no fueron creadas.
 
 Regla de cierre de Fase 8:
 
-- la Fase 8 no se considera cerrada solo porque los items ya existan en la libreria o en la coleccion;
+- la Fase 8 no se considera cerrada solo porque los items ya existan en la librería o en la colección;
 - la Fase 8 se considera cerrada solo cuando se completan ambos pasos, en este orden:
-  - sincronizacion bibliografica del corpus final con Zotero;
-  - creacion o actualizacion de la nota hija minima de `screening` por cada item sincronizado;
-- antes de iniciar Fase 8, el agente debe actualizar en `case.env` las rutas vigentes de `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX` si todavia estan vacias, desactualizadas o apuntan a otra corrida;
-- si el agente ejecuta `prepare_zotero_import.py` o `sync_zotero_mcp.py`, debe verificar despues si corresponde ejecutar tambien `write_zotero_notes.py --phase screening`;
-- el agente no debe asumir que la escritura de notas ocurre implicitamente dentro de `sync_zotero_mcp.py`.
+  - sincronización bibliográfica del corpus final con Zotero;
+  - creación o actualización de la nota hija minima de `screening` por cada item sincronizado;
+- antes de iniciar Fase 8, el agente debe actualizar en `case.env` las rutas vigentes de `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX` si todavia están vacías, desactualizadas o apuntan a otra corrida;
+- si el agente ejecuta `prepare_zotero_import.py` o `sync_zotero_mcp.py`, debe verificar después si corresponde ejecutar también `write_zotero_notes.py --phase screening`;
+- el agente no debe asumir que la escritura de notas ocurre implícitamente dentro de `sync_zotero_mcp.py`.
 
 ## Regla para cribado y selección
 
-- toda refinacion sustantiva de la cadena de busqueda debe quedar trazada en un artefacto como `query_history.md`;
+- toda refinación sustantiva de la cadena de búsqueda debe quedar trazada en un artefacto como `query_history.md`;
 - ese historial debe registrar al menos:
-  - version de la query;
+  - versión de la query;
   - motivo del cambio;
-  - ajustes metodologicos relevantes;
+  - ajustes metodológicos relevantes;
   - efecto operativo observado en volumen o pertinencia;
 - antes de pasar de Fase 3 a Fase 4, el agente debe revisar `summary.json` y `search_log.md` para detectar si el volumen estimado supera `max_results` o el umbral operativo;
 - si Fase 3 usa varias fuentes, el agente debe revisar además `merged_summary.json` y `source_merge_log.md` antes de pasar a Fase 4;
@@ -148,8 +150,9 @@ Regla de cierre de refinamiento:
 - si la query cambia de forma sustantiva entre corridas, el agente debe actualizar `query.txt` con la version vigente y mantener o crear `query_history.md` para conservar las versiones anteriores y su justificacion;
 - `search_log.md` documenta la corrida vigente, pero no reemplaza el historial de refinamientos.
 - si el caso usa varias fuentes, la Fase 2 debe admitir una `query` por fuente;
-- el agente no debe asumir que una misma sintaxis sirve de forma identica para `OpenAlex`, `DOAJ`, `Semantic Scholar`, `Scopus` y `Redalyc`;
+- el agente no debe asumir que una misma sintaxis sirve de forma identica para `OpenAlex`, `DOAJ`, `Semantic Scholar`, `Lens`, `Scopus` y `Redalyc`;
 - si el caso usa Semantic Scholar, debe traducir la estrategia conceptual a una query semantica natural, no a operadores booleanos ni busqueda por campos especificos;
+- si el caso usa Lens, debe traducir la estrategia a una query `query_string` sencilla para buscar en `title` y `abstract`;
 - si el caso usa PubMed, debe traducir la estrategia a sintaxis PubMed, preferentemente con campos `[Title/Abstract]`;
 - si el caso usa Scopus en modo `manual_csv`, el cierre de Fase 2 debe detenerse para que el usuario ejecute la búsqueda web en Scopus, exporte el CSV, guarde el archivo en el workspace y complete `SCOPUS_CSV_FILE`;
 - puede existir una estrategia conceptual comun, pero debe traducirse y guardarse por separado en cada `search/<fuente>/query.txt`;
@@ -159,7 +162,7 @@ Regla de cierre de refinamiento:
 - `initial`: separar ruido evidente de señal potencial con `título`, `resumen` y metadatos básicos.
 - `focused`: reevaluar solo los `Incluir` y `Dudoso` del `initial`, todavía principalmente con `título + resumen`, pero con mayor exigencia de alineación temática y metodológica.
 - entre `focused` y la selección final: validar accesibilidad, recuperar los archivos fuente y preparar texto legible para revisión cuando sea posible.
-- selección final / evaluación de elegibilidad: cerrar la selección del corpus antes de extracción, trabajando solo con estudios que sí tengan `texto completo` accesible y legible.
+- selección final / evaluación de elegibilidad: cerrar la selección del corpus antes de extracción, trabajando solo con estudios que sí tengan `texto completo` accesible y legible, ya sea en PDF, HTML o algún otro formato.
 
 Regla de redacción de artefactos:
 
@@ -229,6 +232,7 @@ No se recomienda pasar de dos niveles de cribado más una selección final dentr
 - Si el trabajo requiere automatizar la búsqueda abierta en OpenAlex, consulta `guides/openalex-automation.md`.
 - Si el trabajo requiere automatizar búsqueda abierta en DOAJ, consulta `guides/doaj-automation.md`.
 - Si el trabajo requiere automatizar búsqueda semántica complementaria en Semantic Scholar, consulta `guides/semanticscholar-automation.md`.
+- Si el trabajo requiere automatizar búsqueda en Lens Scholarly API, consulta `guides/lens-automation.md`.
 - Si el tema tiene pertinencia biomédica o de salud y requiere PubMed, consulta `guides/pubmed-automation.md`.
 - Si el trabajo requiere incorporar Scopus, consulta `guides/scopus-automation.md`.
 - Si el trabajo requiere automatizar búsqueda regional en Redalyc con API key, consulta `guides/redalyc-automation.md`.
@@ -243,6 +247,7 @@ Antes de ejecutar **cualquier fase** del flujo automatizado, el agente **DEBE**:
    - `guides/openalex-automation.md` para OpenAlex
    - `guides/doaj-automation.md` para DOAJ
    - `guides/semanticscholar-automation.md` para Semantic Scholar
+   - `guides/lens-automation.md` para Lens
    - `guides/pubmed-automation.md` para PubMed
    - `guides/scopus-automation.md` para Scopus
    - `guides/redalyc-automation.md` para Redalyc

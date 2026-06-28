@@ -14,6 +14,7 @@ Regla práctica:
 | `openalex_search.py` | Fase 3 | Buscar en OpenAlex y normalizar resultados | `OPENALEX_QUERY_FILE`, filtros, `case.env` | `search/openalex/*`, `screening/screening_matrix.*` |
 | `doaj_search.py` | Fase 3 | Buscar artículos en DOAJ | `DOAJ_QUERY_FILE`, años, `case.env` | `search/doaj/*`, `screening/screening_matrix.*` |
 | `semanticscholar_search.py` | Fase 3 | Buscar en Semantic Scholar con query semántica | `SEMANTIC_SCHOLAR_QUERY_FILE`, API key recomendada | `search/semanticscholar/*`, `screening/screening_matrix.*` |
+| `lens_search.py` | Fase 3 | Buscar en Lens Scholarly API con query sobre título/resumen | `LENS_QUERY_FILE`, `LENS_API_KEY` | `search/lens/*`, `screening/screening_matrix.*` |
 | `redalyc_search.py` | Fase 3 | Buscar en Redalyc con API key | `REDALYC_QUERY_FILE`, `REDALYC_SEARCH_FIELD` | `search/redalyc/*`, `screening/screening_matrix.*` |
 | `pubmed_search.py` | Fase 3 | Buscar en PubMed cuando el tema es biomédico o de salud | `PUBMED_QUERY_FILE`, años, API key opcional | `search/pubmed/*`, `screening/screening_matrix.*` |
 | `scopus_search.py` | Fase 3 | Buscar en Scopus vía API cuando hay permisos suficientes | `SCOPUS_QUERY_FILE`, API key | `search/scopus/*`, `screening/screening_matrix.*` |

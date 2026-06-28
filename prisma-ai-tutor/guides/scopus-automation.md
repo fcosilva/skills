@@ -116,7 +116,7 @@ Campos recomendados en el CSV:
 Para agregar Scopus al orquestador:
 
 ```env
-PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,scopus,redalyc
+PRISMA_PHASE3_SOURCES=openalex,doaj,semanticscholar,lens,scopus,redalyc
 PRISMA_PHASE3_AUTO_MERGE=true
 ```
 

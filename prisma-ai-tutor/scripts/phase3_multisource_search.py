@@ -14,11 +14,12 @@ from openalex_search import load_env_config, resolve_bool_flag, resolve_str, res
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-DEFAULT_SOURCE_ORDER = ["openalex", "doaj", "semanticscholar", "redalyc"]
+DEFAULT_SOURCE_ORDER = ["openalex", "doaj", "semanticscholar", "lens", "redalyc"]
 SOURCE_TO_SCRIPT = {
     "openalex": SCRIPT_DIR / "openalex_search.py",
     "doaj": SCRIPT_DIR / "doaj_search.py",
     "semanticscholar": SCRIPT_DIR / "semanticscholar_search.py",
+    "lens": SCRIPT_DIR / "lens_search.py",
     "pubmed": SCRIPT_DIR / "pubmed_search.py",
     "scopus": SCRIPT_DIR / "scopus_search.py",
     "redalyc": SCRIPT_DIR / "redalyc_search.py",
@@ -30,6 +31,7 @@ SOURCE_OUT_DIR_KEYS = {
     "openalex": ("OPENALEX_OUT_DIR", "outputs/openalex-search"),
     "doaj": ("DOAJ_OUT_DIR", "outputs/doaj-search"),
     "semanticscholar": ("SEMANTIC_SCHOLAR_OUT_DIR", "outputs/semanticscholar-search"),
+    "lens": ("LENS_OUT_DIR", "outputs/lens-search"),
     "pubmed": ("PUBMED_OUT_DIR", "outputs/pubmed-search"),
     "scopus": ("SCOPUS_OUT_DIR", "outputs/scopus-search"),
     "redalyc": ("REDALYC_OUT_DIR", "outputs/redalyc-search"),
@@ -63,7 +65,7 @@ def parse_args() -> Phase3Config:
         dest="sources",
         help=(
             "Source to execute in phase 3. Repeat to keep a specific order. "
-            "Supported: openalex, doaj, semanticscholar, pubmed, scopus, redalyc."
+            "Supported: openalex, doaj, semanticscholar, lens, pubmed, scopus, redalyc."
         ),
     )
     parser.add_argument(

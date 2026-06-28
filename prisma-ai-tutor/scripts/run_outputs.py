@@ -175,6 +175,7 @@ def estimated_result_count(search_summary: dict[str, Any]) -> Any:
         "scielo_meta_count",
         "doaj_meta_count",
         "semanticscholar_meta_count",
+        "lens_meta_count",
         "pubmed_meta_count",
         "scopus_meta_count",
         "redalyc_meta_count",
@@ -202,6 +203,7 @@ def determine_phase_statuses(run_dir: Path) -> dict[str, str]:
         run_dir / "search" / "scielo" / "summary.json",
         run_dir / "search" / "doaj" / "summary.json",
         run_dir / "search" / "semanticscholar" / "summary.json",
+        run_dir / "search" / "lens" / "summary.json",
         run_dir / "search" / "pubmed" / "summary.json",
         run_dir / "search" / "scopus" / "summary.json",
         run_dir / "search" / "redalyc" / "summary.json",
@@ -319,6 +321,7 @@ def find_case_context(run_dir: Path) -> tuple[str, Path | None, Path | None]:
             run_dir / "search" / "scielo" / "summary.json",
             run_dir / "search" / "doaj" / "summary.json",
             run_dir / "search" / "semanticscholar" / "summary.json",
+            run_dir / "search" / "lens" / "summary.json",
             run_dir / "search" / "pubmed" / "summary.json",
             run_dir / "search" / "scopus" / "summary.json",
             run_dir / "search" / "redalyc" / "summary.json",
@@ -352,6 +355,7 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "scielo" / "summary.json",
         search_dir / "doaj" / "summary.json",
         search_dir / "semanticscholar" / "summary.json",
+        search_dir / "lens" / "summary.json",
         search_dir / "pubmed" / "summary.json",
         search_dir / "scopus" / "summary.json",
         search_dir / "redalyc" / "summary.json",
@@ -363,6 +367,7 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "scielo" / "query.txt",
         search_dir / "doaj" / "query.txt",
         search_dir / "semanticscholar" / "query.txt",
+        search_dir / "lens" / "query.txt",
         search_dir / "pubmed" / "query.txt",
         search_dir / "scopus" / "query.txt",
         search_dir / "redalyc" / "query.txt",
@@ -374,6 +379,7 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "scielo" / "query_history.md",
         search_dir / "doaj" / "query_history.md",
         search_dir / "semanticscholar" / "query_history.md",
+        search_dir / "lens" / "query_history.md",
         search_dir / "pubmed" / "query_history.md",
         search_dir / "scopus" / "query_history.md",
         search_dir / "redalyc" / "query_history.md",
@@ -386,6 +392,7 @@ def build_run_overview(run_dir: Path) -> str:
         search_dir / "scielo" / "search_log.md",
         search_dir / "doaj" / "search_log.md",
         search_dir / "semanticscholar" / "search_log.md",
+        search_dir / "lens" / "search_log.md",
         search_dir / "pubmed" / "search_log.md",
         search_dir / "scopus" / "search_log.md",
         search_dir / "redalyc" / "search_log.md",
@@ -427,6 +434,10 @@ def build_run_overview(run_dir: Path) -> str:
     audit_path = first_existing(
         synthesis_dir / "final_audit.md",
         run_dir / "final_audit.md",
+    )
+    final_report_path = first_existing(
+        synthesis_dir / "informe_final.md",
+        run_dir / "informe_final.md",
     )
     search_summary = read_json(search_summary_path) or {}
     initial_rows = read_csv_rows(first_existing(screening_dir / "screening_decisions_initial.csv", run_dir / "screening_decisions_initial.csv"))
@@ -540,6 +551,7 @@ def build_run_overview(run_dir: Path) -> str:
             "",
             f"- {maybe_link(overview_path, synthesis_path, 'synthesis/narrative_synthesis.md')}",
             f"- {maybe_link(overview_path, audit_path, 'synthesis/final_audit.md')}",
+            f"- {maybe_link(overview_path, final_report_path, 'synthesis/informe_final.md (solo con confirmación humana)')}",
             "",
         ]
     )
