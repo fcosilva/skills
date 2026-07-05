@@ -71,7 +71,9 @@ Regla operativa para el agente:
 - ejecutar una sola fase por vez;
 - confirmar el estado actualizado del caso antes de avanzar.
 - todos los artefactos operativos de una corrida deben escribirse dentro de `outputs/<corrida>/`;
+- las queries aprobadas por fuente son artefactos operativos y deben vivir en `outputs/<corrida>/search/<fuente>/query.txt`, no en `cases/<slug>/search/<fuente>/query.txt`;
 - el agente no debe crear archivos del caso directamente en `outputs/` raíz;
+- el agente no debe crear carpetas `search/`, `screening/`, `fulltext/`, `extraction/`, `quality/` o `synthesis/` dentro de `cases/<slug>/`;
 - si detecta artefactos del caso en `outputs/` raíz, debe tratarlos como desviación del flujo, corregir la ruta antes de seguir y dejar constancia de la corrección.
 
 Regla adicional para Fase 3 multi-fuente:
@@ -155,7 +157,7 @@ Regla de cierre de refinamiento:
 - si el caso usa Lens, debe traducir la estrategia a una query `query_string` sencilla para buscar en `title` y `abstract`;
 - si el caso usa PubMed, debe traducir la estrategia a sintaxis PubMed, preferentemente con campos `[Title/Abstract]`;
 - si el caso usa Scopus en modo `manual_csv`, el cierre de Fase 2 debe detenerse para que el usuario ejecute la búsqueda web en Scopus, exporte el CSV, guarde el archivo en el workspace y complete `SCOPUS_CSV_FILE`;
-- puede existir una estrategia conceptual comun, pero debe traducirse y guardarse por separado en cada `search/<fuente>/query.txt`;
+- puede existir una estrategia conceptual comun, pero debe traducirse y guardarse por separado en cada `outputs/<corrida>/search/<fuente>/query.txt`;
 - si las queries por fuente divergen de forma sustantiva, la justificacion debe quedar trazada por fuente en `query_history.md`.
 - al cerrar Fase 2, el agente debe pedir aprobación breve del usuario antes de ejecutar Fase 3.
 

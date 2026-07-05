@@ -33,8 +33,8 @@ Abre los artefactos en este orden:
 
 ## Resumen ejecutivo de la corrida
 
-- Query vigente esperada: `search/<fuente>/query.txt`
-- Historial de refinamiento esperado: `search/<fuente>/query_history.md`
+- Query vigente esperada: `outputs/<corrida>/search/<fuente>/query.txt`
+- Historial de refinamiento esperado: `outputs/<corrida>/search/<fuente>/query_history.md`
 - Última fase cerrada: [[...]]
 - Próxima fase sugerida: [[...]]
 - Observación breve: [[...]]

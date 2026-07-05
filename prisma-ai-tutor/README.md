@@ -139,6 +139,8 @@ Regla de resolución de rutas:
 - las rutas internas del skill se resuelven desde el propio skill;
 - las rutas operativas del caso, como `cases/` y `outputs/`, se resuelven contra `PRISMA_AI_TUTOR_WORKSPACE_ROOT` si está definido;
 - si `PRISMA_AI_TUTOR_WORKSPACE_ROOT` no está definido, se usa el directorio actual desde el que se ejecuta el comando.
+- los artefactos operativos de corrida, incluidas las queries por fuente, deben vivir en `outputs/<corrida>/`;
+- `cases/<slug>/` guarda el expediente del caso y no debe contener carpetas operativas como `search/`, `screening/`, `fulltext/`, `extraction/`, `quality/` o `synthesis/`.
 
 ## Flujo recomendado
 
@@ -375,10 +377,10 @@ Integración multi-fuente:
 Artefactos típicos por corrida:
 
 - `run_overview.md`
-- `search/openalex/query.txt`
-- `search/<fuente>/normalized_results.json`
-- `search/<fuente>/normalized_results.csv`
-- `search/<fuente>/search_log.md`
+- `search/openalex/query.txt` dentro de `outputs/<corrida>/`
+- `search/<fuente>/normalized_results.json` dentro de `outputs/<corrida>/`
+- `search/<fuente>/normalized_results.csv` dentro de `outputs/<corrida>/`
+- `search/<fuente>/search_log.md` dentro de `outputs/<corrida>/`
 - `screening/screening_matrix.md`
 - `screening/screening_matrix.csv`
 - `screening/screening_decisions_*.csv`

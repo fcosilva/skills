@@ -32,8 +32,8 @@ Si el agente necesita hacer trabajo adicional:
 - Protocolo: [protocol-template.md](../assets/protocol-template.md)
 - Matriz de cribado: [screening-matrix.md](../assets/screening-matrix.md)
 - Índice principal de cada corrida: [run-overview.md](../assets/run-overview.md)
-- Query persistida por fuente: `search/<fuente>/query.txt` en el directorio de salida de cada búsqueda
-- Historial de refinamiento de query: `search/<fuente>/query_history.md` en el directorio de salida cuando exista al menos una refinación sustantiva
+- Query persistida por fuente: `outputs/<corrida>/search/<fuente>/query.txt`
+- Historial de refinamiento de query: `outputs/<corrida>/search/<fuente>/query_history.md` cuando exista al menos una refinación sustantiva
 - Archivo de configuración del caso: [case.env.template](../assets/case.env.template) como plantilla de referencia
 - Resumen por iteración de cribado: `screening/screening_summary_<fase>.md` en el directorio de salida de cada búsqueda
 - Trazabilidad acumulada de cribado y selección final: [screening-trace.md](../assets/screening-trace.md)
@@ -63,6 +63,7 @@ Regla práctica:
 - todos esos placeholders y artefactos derivados deben quedar dentro del mismo `outputs/<corrida>/`;
 - el agente no debe crear ni actualizar artefactos del caso en `outputs/` raíz;
 - antes de escribir artefactos manuales o automatizados, el agente debe validar que la ruta destino incluya explícitamente `outputs/<corrida>/`.
+- el agente no debe crear `cases/<slug>/search/`, `cases/<slug>/screening/`, `cases/<slug>/fulltext/`, `cases/<slug>/extraction/`, `cases/<slug>/quality/` ni `cases/<slug>/synthesis/`; `cases/<slug>/` es expediente del caso, no directorio de artefactos de corrida.
 
 ## Reportes de agente
 
@@ -125,7 +126,7 @@ Acción:
 
 - construir cadena inicial
 - ajustar tipo documental, idioma, fechas y demás filtros
-- guardar la cadena en `search/<fuente>/query.txt`
+- guardar la cadena en `outputs/<corrida>/search/<fuente>/query.txt`
 - si la cadena cambia de forma sustantiva en una nueva iteración, crear o actualizar `query_history.md`
 
 Modo multi-fuente recomendado:
@@ -133,14 +134,14 @@ Modo multi-fuente recomendado:
 - si el caso activa más de una fuente, Fase 2 debe producir una `query` por fuente;
 - no asumas que la sintaxis exacta puede reutilizarse sin cambios entre `OpenAlex`, `DOAJ`, `Semantic Scholar`, `Lens`, `PubMed`, `Scopus` y `Redalyc`;
 - parte de una estrategia conceptual comun, pero traduce cada version al comportamiento real de la fuente;
-- deja visible la version aprobada en:
-  - `search/openalex/query.txt`
-  - `search/doaj/query.txt`
-  - `search/semanticscholar/query.txt`
-  - `search/lens/query.txt`
-  - `search/pubmed/query.txt` si el tema tiene pertinencia biomédica o de salud
-  - `search/scopus/query.txt` si el caso incorpora Scopus
-  - `search/redalyc/query.txt`
+- deja visible la version aprobada dentro de `outputs/<corrida>/`:
+  - `outputs/<corrida>/search/openalex/query.txt`
+  - `outputs/<corrida>/search/doaj/query.txt`
+  - `outputs/<corrida>/search/semanticscholar/query.txt`
+  - `outputs/<corrida>/search/lens/query.txt`
+  - `outputs/<corrida>/search/pubmed/query.txt` si el tema tiene pertinencia biomédica o de salud
+  - `outputs/<corrida>/search/scopus/query.txt` si el caso incorpora Scopus
+  - `outputs/<corrida>/search/redalyc/query.txt`
 - si una fuente necesita una version mas simple, mas corta o con distinto campo de búsqueda, registra esa decision metodologica en su propio `query_history.md`.
 
 Reglas operativas:
@@ -156,7 +157,7 @@ Reglas operativas:
 - en `Lens`, usa una query `query_string` con booleanos simples sobre `title` y `abstract`;
 - en `PubMed`, usa sintaxis propia de PubMed, preferentemente con campos `[Title/Abstract]`;
 - si el tema está claramente relacionado con salud, medicina, biomedicina, bioética, educación médica o IA en salud, el agente debe proponer PubMed como fuente especializada.
-- si Scopus está activo con `SCOPUS_MODE=manual_csv`, esta fase debe terminar con una pausa operativa: el usuario debe buscar manualmente en Scopus con `search/scopus/query.txt`, exportar CSV, guardar el archivo en el workspace y completar `SCOPUS_CSV_FILE` antes de autorizar Fase 3.
+- si Scopus está activo con `SCOPUS_MODE=manual_csv`, esta fase debe terminar con una pausa operativa: el usuario debe buscar manualmente en Scopus con `outputs/<corrida>/search/scopus/query.txt`, exportar CSV, guardar el archivo en el workspace y completar `SCOPUS_CSV_FILE` antes de autorizar Fase 3.
 
 Nota:
 
@@ -170,14 +171,14 @@ Transición obligatoria:
 
 Salida:
 
-- `search/<fuente>/query.txt`
-- `search/<fuente>/query_history.md` cuando ya hubo refinamientos sustantivos
+- `outputs/<corrida>/search/<fuente>/query.txt`
+- `outputs/<corrida>/search/<fuente>/query_history.md` cuando ya hubo refinamientos sustantivos
 - estrategia de búsqueda documentada
 
 Si hay varias fuentes activas:
 
-- un `query.txt` por fuente;
-- cero o más `query_history.md` por fuente;
+- un `outputs/<corrida>/search/<fuente>/query.txt` por fuente;
+- cero o más `outputs/<corrida>/search/<fuente>/query_history.md` por fuente;
 - constancia breve en el protocolo de qué partes de la estrategia conceptual fueron comunes y cuáles se adaptaron por sintaxis o cobertura.
 
 Pausa:
@@ -188,7 +189,7 @@ Pausa:
 
 Entrada:
 
-- `search/<fuente>/query.txt`
+- `outputs/<corrida>/search/<fuente>/query.txt`
 - archivo de configuración disponible y validado por el estudiante
 - parámetros de OpenAlex
 - API key de Semantic Scholar recomendada si la fuente está activa, para evitar errores `429`
@@ -628,8 +629,8 @@ Cada iteración de búsqueda y cribado debe dejar sus propios artefactos en un d
 
 Como mínimo, cada iteración debe conservar:
 
-- `search/<fuente>/query.txt`
-- `search/<fuente>/search_log.md`
+- `outputs/<corrida>/search/<fuente>/query.txt`
+- `outputs/<corrida>/search/<fuente>/search_log.md`
 - `screening/screening_matrix.md`
 - `screening_decisions_<fase>.csv`
 - `screening_summary_<fase>.md`
@@ -846,6 +847,6 @@ La idea es no leer textos completos demasiado pronto, pero tampoco cerrar la sel
 ## Frases de transición sugeridas
 
 - `Fase 1 completada. ¿Autorizas que pase a la construcción de la query inicial?`
-- `La query ya quedó guardada en search/<fuente>/query.txt. ¿Autorizas ejecutar la búsqueda en la fuente programática seleccionada?`
+- `La query ya quedó guardada en outputs/<corrida>/search/<fuente>/query.txt. ¿Autorizas ejecutar la búsqueda en la fuente programática seleccionada?`
 - `La búsqueda ya generó una matriz inicial. ¿Autorizas el cribado preliminar sobre esa misma matriz?`
 - `El cribado sugiere refinar la estrategia. ¿Prefieres ajustar la query o pasar a extracción solo con los casos dudosos?`

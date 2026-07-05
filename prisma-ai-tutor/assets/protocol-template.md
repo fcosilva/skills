@@ -30,7 +30,7 @@ Nota de navegación:
 
 ## Configuración técnica de búsqueda
 
-- Query aprobada y persistida en `search/<fuente>/query.txt`
+- Query aprobada y persistida en `outputs/<corrida>/search/<fuente>/query.txt`
 - Archivo de configuración de OpenAlex disponible y validado por el estudiante
 - `OPENALEX_REQUIRE_ABSTRACT=true` cuando el caso exige trabajar solo con estudios con resumen disponible
 - Si se llega al cribado `focused`, la validación de `Texto completo accesible` debe hacerse sobre ese subconjunto antes de la selección final

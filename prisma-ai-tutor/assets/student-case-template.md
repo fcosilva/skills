@@ -109,7 +109,7 @@ Recomendado. Si falta, el skill puede proponer un borrador inicial, pero no debe
 
 Nota:
 
-- si aquí se declara búsqueda en más de un idioma, la `search/<fuente>/query.txt` de la Fase 2 debe reflejarlo explícitamente o justificar la reducción;
+- si aquí se declara búsqueda en más de un idioma, la `outputs/<corrida>/search/<fuente>/query.txt` de la Fase 2 debe reflejarlo explícitamente o justificar la reducción;
 - si aquí se excluye `preprint` u otro tipo documental, la configuración técnica de la búsqueda debe trasladar esa exclusión a `OPENALEX_EXCLUDE_TYPES` o a los flags equivalentes.
 - si el caso usa varias fuentes, la Fase 2 puede requerir una `query` distinta por fuente aunque la estrategia conceptual sea la misma.
 

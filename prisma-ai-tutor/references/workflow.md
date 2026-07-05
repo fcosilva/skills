@@ -51,7 +51,8 @@ Debe incluir:
 Regla clave:
 
 - si hay varias fuentes, no se debe asumir que una misma sintaxis sirve para todas.
-- cada fuente debe tener su propio `search/<fuente>/query.txt`.
+- cada fuente debe tener su propio `outputs/<corrida>/search/<fuente>/query.txt`.
+- no se deben guardar queries operativas en `cases/<slug>/search/`.
 
 ## Fase 3. Búsqueda automatizada multi-fuente
 
@@ -71,11 +72,11 @@ Fuentes programáticas habituales:
 
 Salida esperada:
 
-- `search/<fuente>/raw_results.json`;
-- `search/<fuente>/normalized_results.json`;
-- `search/<fuente>/normalized_results.csv`;
-- `search/<fuente>/search_log.md`;
-- `search/<fuente>/summary.json`;
+- `outputs/<corrida>/search/<fuente>/raw_results.json`;
+- `outputs/<corrida>/search/<fuente>/normalized_results.json`;
+- `outputs/<corrida>/search/<fuente>/normalized_results.csv`;
+- `outputs/<corrida>/search/<fuente>/search_log.md`;
+- `outputs/<corrida>/search/<fuente>/summary.json`;
 - `search/merged_normalized_results.*` cuando hay más de una fuente;
 - `search/source_merge_log.*`;
 - `screening/screening_matrix.*`.
