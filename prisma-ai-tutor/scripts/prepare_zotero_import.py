@@ -7,6 +7,7 @@ import argparse
 import csv
 import json
 import shutil
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -134,15 +135,88 @@ def read_json_rows(path: Path) -> list[dict[str, Any]]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def normalize_doi(value: Any) -> str:
+    clean = str(value or "").strip()
+    clean = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", clean, flags=re.I)
+    return clean.casefold()
+
+
+def raw_doi(row: dict[str, Any]) -> str:
+    direct = normalize_doi(row.get("DOI") or row.get("doi"))
+    if direct:
+        return direct
+    bibjson = row.get("bibjson") if isinstance(row.get("bibjson"), dict) else {}
+    for identifier in bibjson.get("identifier", []) or []:
+        if isinstance(identifier, dict) and str(identifier.get("type", "")).casefold() == "doi":
+            return normalize_doi(identifier.get("id"))
+    return ""
+
+
+def extract_raw_bibliography(row: dict[str, Any]) -> dict[str, str]:
+    if "Abbreviated Source Title" in row or "Source title" in row:
+        start, end = str(row.get("Page start", "")).strip(), str(row.get("Page end", "")).strip()
+        return {
+            "publisher": str(row.get("Publisher", "")).strip(),
+            "volume": str(row.get("Volume", "")).strip(),
+            "issue": str(row.get("Issue", "")).strip(),
+            "pages": str(row.get("Art. No.", "")).strip() or (f"{start}-{end}" if start and end else start),
+        }
+    if isinstance(row.get("biblio"), dict):
+        biblio = row["biblio"]
+        primary = row.get("primary_location") if isinstance(row.get("primary_location"), dict) else {}
+        source = primary.get("source") if isinstance(primary.get("source"), dict) else {}
+        start, end = str(biblio.get("first_page", "") or "").strip(), str(biblio.get("last_page", "") or "").strip()
+        return {
+            "publisher": str(source.get("host_organization_name", "") or "").strip(),
+            "volume": str(biblio.get("volume", "") or "").strip(),
+            "issue": str(biblio.get("issue", "") or "").strip(),
+            "pages": f"{start}-{end}" if start and end else start,
+        }
+    bibjson = row.get("bibjson") if isinstance(row.get("bibjson"), dict) else {}
+    journal = bibjson.get("journal") if isinstance(bibjson.get("journal"), dict) else {}
+    publisher = bibjson.get("publisher")
+    if isinstance(publisher, dict):
+        publisher = publisher.get("name", "")
+    start, end = str(bibjson.get("start_page", "")).strip(), str(bibjson.get("end_page", "")).strip()
+    return {
+        "publisher": str(publisher or "").strip(),
+        "volume": str(journal.get("volume", "") or "").strip(),
+        "issue": str(journal.get("number", "") or "").strip(),
+        "pages": f"{start}-{end}" if start and end else start,
+    }
+
+
+def load_raw_bibliographic_enrichment(search_dir: Path) -> dict[str, dict[str, str]]:
+    output: dict[str, dict[str, str]] = {}
+    for path in sorted(search_dir.glob("*/raw_results.json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        rows = payload if isinstance(payload, list) else payload.get("results", []) if isinstance(payload, dict) else []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            doi = raw_doi(row)
+            if not doi:
+                continue
+            target = output.setdefault(doi, {})
+            for key, value in extract_raw_bibliography(row).items():
+                if value and not target.get(key):
+                    target[key] = value
+    return output
+
+
 def find_normalized_results(screening_matrix: Path) -> Path:
     candidates = [
+        screening_matrix.parent.parent / "search" / "merged_normalized_results.json",
         screening_matrix.parent / "normalized_results.json",
         screening_matrix.parent.parent / "search" / "normalized_results.json",
     ]
     for candidate in candidates:
         if candidate.exists():
             return candidate
-    return screening_matrix.parent.parent / "search" / "normalized_results.json"
+    raise FileNotFoundError(
+        "No normalized result source found. Expected merged_normalized_results.json "
+        "for a multi-source run or normalized_results.json for a single-source run."
+    )
 
 
 def find_source_attachment(attachments_dir: Path, code: str) -> Path | None:
@@ -190,6 +264,11 @@ def build_manifest_row(
         "doi": matrix_row.get("DOI", ""),
         "abstract": normalized_row.get("abstract", ""),
         "journal": normalized_row.get("journal", ""),
+        "publisher": normalized_row.get("publisher", ""),
+        "volume": normalized_row.get("volume", ""),
+        "issue": normalized_row.get("issue", ""),
+        "pages": normalized_row.get("pages", "") or normalized_row.get("page", ""),
+        "repository": normalized_row.get("repository", ""),
         "language": normalized_row.get("language", ""),
         "open_access": matrix_row.get("Acceso abierto", ""),
         "fulltext_accessible": matrix_row.get("Texto completo accesible", ""),
@@ -222,6 +301,26 @@ def first_nonempty(*values: str) -> str:
     return ""
 
 
+def canonical_identity(row: dict[str, Any]) -> str:
+    doi = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", str(row.get("doi", "")).strip(), flags=re.I)
+    if doi:
+        return f"doi:{doi.casefold()}"
+    title = re.sub(r"[^a-z0-9]+", " ", str(row.get("title", "")).casefold()).strip()
+    return f"title:{title}" if title else ""
+
+
+def validate_manifest_uniqueness(rows: list[dict[str, Any]]) -> None:
+    codes = [str(row.get("code", "")).strip() for row in rows]
+    duplicate_codes = sorted({code for code in codes if code and codes.count(code) > 1})
+    identities = [canonical_identity(row) for row in rows]
+    duplicate_identities = sorted({value for value in identities if value and identities.count(value) > 1})
+    if duplicate_codes or duplicate_identities:
+        raise ValueError(
+            "Duplicate Zotero manifest entries: "
+            f"codes={duplicate_codes[:10]}; identities={duplicate_identities[:10]}"
+        )
+
+
 def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -244,11 +343,14 @@ def prepare_import(config: ZoteroConfig) -> dict[str, Any]:
     normalized_path = find_normalized_results(config.screening_matrix)
     normalized_rows = read_json_rows(normalized_path)
     normalized_by_code = {str(row.get("code", "")).strip(): row for row in normalized_rows}
+    raw_bibliography = load_raw_bibliographic_enrichment(normalized_path.parent)
 
     included = [
         row for row in decisions_rows
         if row.get("decision", "").strip().lower() == "incluir"
     ]
+    if included and not normalized_rows:
+        raise ValueError(f"Normalized metadata source is empty: {normalized_path}")
 
     manifest_rows: list[dict[str, Any]] = []
     copy_log_rows: list[dict[str, Any]] = []
@@ -274,11 +376,16 @@ def prepare_import(config: ZoteroConfig) -> dict[str, Any]:
                 config.library_files_dir,
             )
 
+        normalized_row = dict(normalized_by_code.get(code) or {})
+        enrichment = raw_bibliography.get(normalize_doi(matrix_row.get("DOI", "")), {})
+        for key, value in enrichment.items():
+            if value and not normalized_row.get(key):
+                normalized_row[key] = value
         manifest_rows.append(
             build_manifest_row(
                 matrix_row,
                 decision_row,
-                normalized_by_code.get(code),
+                normalized_row,
                 config,
                 copied_attachment,
                 attachment_status,
@@ -294,6 +401,15 @@ def prepare_import(config: ZoteroConfig) -> dict[str, Any]:
             }
         )
 
+    validate_manifest_uniqueness(manifest_rows)
+    enriched = sum(
+        1 for row in manifest_rows
+        if row.get("authors") or row.get("publication_date") or row.get("journal")
+    )
+    if manifest_rows and enriched == 0:
+        raise ValueError(
+            "Zotero manifest has no enriched bibliographic metadata; refusing a title/DOI-only import."
+        )
     summary = {
         "generated_at": Path(__file__).resolve().name,
         "config_file": str(config.config_file),
@@ -303,6 +419,15 @@ def prepare_import(config: ZoteroConfig) -> dict[str, Any]:
         "library_files_dir": str(config.library_files_dir),
         "screening_decisions": str(config.screening_decisions),
         "screening_matrix": str(config.screening_matrix),
+        "normalized_results": str(normalized_path),
+        "items_with_enriched_metadata": enriched,
+        "items_with_authors": sum(bool(row.get("authors")) for row in manifest_rows),
+        "items_with_publication_date": sum(bool(row.get("publication_date") or row.get("year")) for row in manifest_rows),
+        "items_with_journal_or_repository": sum(bool(row.get("journal") or row.get("repository")) for row in manifest_rows),
+        "items_with_volume": sum(bool(row.get("volume")) for row in manifest_rows),
+        "items_with_issue": sum(bool(row.get("issue")) for row in manifest_rows),
+        "items_with_pages": sum(bool(row.get("pages")) for row in manifest_rows),
+        "items_with_publisher": sum(bool(row.get("publisher")) for row in manifest_rows),
         "included_items": len(included),
         "copied_pdfs": sum(1 for row in copy_log_rows if row["attachment_status"] == "copied"),
         "already_present_pdfs": sum(

@@ -69,6 +69,9 @@ skills/
     │   ├── semanticscholar_search.py
     │   ├── apply_screening_decisions.py
     │   ├── validate_fulltext_access.py
+    │   ├── download_fulltext.py
+    │   ├── audit_fulltext_recovery.py
+    │   ├── prepare_fulltext_review_text.py
     │   └── ...
     └── references/
         ├── constraints.md
@@ -81,6 +84,7 @@ Documentos de apoyo dentro del propio skill:
 
 - [guides/automation-by-phases.md](guides/automation-by-phases.md)
 - [guides/openalex-automation.md](guides/openalex-automation.md)
+- [guides/fulltext-recovery.md](guides/fulltext-recovery.md)
 - [guides/doaj-automation.md](guides/doaj-automation.md)
 - [guides/semanticscholar-automation.md](guides/semanticscholar-automation.md)
 - [guides/lens-automation.md](guides/lens-automation.md)

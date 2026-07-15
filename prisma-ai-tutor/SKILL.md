@@ -1,10 +1,6 @@
 ---
 name: prisma-ai-tutor
-description: Guía mini revisiones sistemáticas de literatura para estudiantes iniciales de Desarrollo de Software usando una versión reducida de PRISMA 2020. Úsalo cuando el usuario necesite delimitar un tema, formular una pregunta de revisión, construir cadenas de búsqueda, definir criterios, cribar estudios, extraer evidencia, evaluar calidad o redactar una síntesis académica con uso responsable de IA.
-license: MIT
-metadata:
-  author: Francisco Silva-Garcés
-  version: "1.1"
+description: "Guía revisiones sistemáticas reducidas con PRISMA 2020: delimitación, queries, búsqueda, cribado, recuperación verificable multivía de PDF/HTML, elegibilidad, Zotero, extracción, calidad y síntesis. Úsalo cuando el usuario necesite ejecutar o auditar cualquiera de estas fases con trazabilidad y uso responsable de IA."
 ---
 
 # PRISMA-AI Tutor
@@ -33,11 +29,33 @@ Usa este skill cuando el usuario necesite apoyo metodológico para una mini revi
 7. Cierra la selección final solo cuando el estudiante o docente confirme humanamente el corpus resultante.
 8. Integra el corpus confirmado en Zotero cuando ya corresponda.
 9. Dentro de la fase Zotero, crea explícitamente las notas hijas mínimas de `screening` antes de dar por cerrada esa fase.
-10. Extrae evidencia verificable desde el texto.
-11. Evalúa calidad metodológica básica.
+10. Propón una plantilla de extracción específica del caso, espera su aprobación y luego prepara una extracción asistida para validación humana.
+11. Propón criterios de calidad acordes con los diseños, espera su aprobación y somete toda valoración asistida a validación humana.
 12. Ayuda a redactar una síntesis narrativa sin exagerar resultados.
 13. Verifica trazabilidad, límites del curso y declaración de uso de IA.
 14. Genera `synthesis/informe_final.md` solo si el estudiante o docente lo confirma explícitamente después de la síntesis y auditoría.
+
+## Regla de recuperación de texto completo
+
+- Intentar varias rutas legítimas por registro: URL de acceso, descubrimiento OA
+  por DOI, repositorios biomédicos y enlaces PDF declarados por la landing.
+- No omitir el descubrimiento de copias abiertas solo porque la metadata inicial
+  indique acceso no abierto.
+- No aceptar un PDF por extensión, URL o Content-Type: exigir firma PDF real.
+- No aceptar HTML por host o presencia de un resumen: exigir cuerpo académico
+  completo y texto extraíble.
+- Auditar falsos positivos y falsos negativos después de la descarga.
+- Tratar la validación remota como provisional; solo marcar `Si` desde textos
+  con estado `prepared` e identidad bibliográfica confirmada.
+- Confirmar identidad con al menos dos señales entre título normalizado, DOI,
+  autor y año; poner en cuarentena cualquier incompatibilidad verificable.
+- Sincronizar todo el subconjunto de decisiones, no solo los archivos
+  recuperados, y validar la integridad del CSV antes de reemplazar CSV/Markdown.
+- En ejecuciones largas, escribir checkpoints incrementales, mostrar progreso
+  y usar `--resume` sin volver a descargar archivos positivos ya verificados.
+- No evadir CAPTCHA, Cloudflare ni verificadores humanos. Usar acceso manual,
+  institucional, APIs o repositorios permitidos.
+- Consultar guides/fulltext-recovery.md antes de ejecutar la Fase 6.
 
 ## Regla sobre scripts auxiliares
 
@@ -128,6 +146,19 @@ Regla de cierre de Fase 8:
 - antes de iniciar Fase 8, el agente debe actualizar en `case.env` las rutas vigentes de `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX` si todavia están vacías, desactualizadas o apuntan a otra corrida;
 - si el agente ejecuta `prepare_zotero_import.py` o `sync_zotero_mcp.py`, debe verificar después si corresponde ejecutar también `write_zotero_notes.py --phase screening`;
 - el agente no debe asumir que la escritura de notas ocurre implícitamente dentro de `sync_zotero_mcp.py`.
+- una corrida multifuente debe usar `search/merged_normalized_results.json`; detenerse si falta la metadata normalizada o el manifiesto queda bibliográficamente vacío;
+- validar unicidad por código y por DOI/título antes de escribir, ejecutar primero `--dry-run` y no lanzar dos sincronizaciones concurrentes sobre la misma colección;
+- no mover, fusionar ni borrar duplicados sin auditoría previa y autorización humana explícita.
+
+## Regla de validación humana para extracción y calidad
+
+- Adaptar ambas plantillas a la pregunta, unidad de análisis y diseños del caso; no reutilizar campos temáticos irrelevantes ni una escala rígida común.
+- Presentar primero el protocolo y la plantilla como `Propuesta pendiente de validación humana`.
+- Tras aprobar la estructura, generar filas asistidas con evidencia y localizadores; usar `No reportado` cuando corresponda y marcar inferencias categoriales.
+- Mantener cada fila como pendiente hasta que el humano la revise, corrija o valide explícitamente.
+- No cerrar Fase 9 o 10, escribir sus notas Zotero ni usar sus datos en síntesis hasta que `validate_human_review_gate.py` confirme todas las filas.
+- Permitir extracción relacional con varias filas por estudio y criterios de calidad diferentes por diseño; no reducirlos silenciosamente a una fila ni comparar puntuaciones incompatibles.
+- Consultar `guides/postselection-workflow.md` antes de ejecutar Fases 8–11.
 
 ## Regla para cribado y selección
 
@@ -156,6 +187,9 @@ Regla de cierre de refinamiento:
 - si el caso usa Semantic Scholar, debe traducir la estrategia conceptual a una query semantica natural, no a operadores booleanos ni busqueda por campos especificos;
 - si el caso usa Lens, debe traducir la estrategia a una query `query_string` sencilla para buscar en `title` y `abstract`;
 - si el caso usa PubMed, debe traducir la estrategia a sintaxis PubMed, preferentemente con campos `[Title/Abstract]`;
+- `query.txt` debe conservar la consulta conceptual aprobada; filtros automáticos
+  de abstract o fecha deben registrarse aparte en `effective_query.txt` y nunca
+  reescribir ni anidar la consulta conceptual en una reejecución;
 - si el caso usa Scopus en modo `manual_csv`, el cierre de Fase 2 debe detenerse para que el usuario ejecute la búsqueda web en Scopus, exporte el CSV, guarde el archivo en el workspace y complete `SCOPUS_CSV_FILE`;
 - puede existir una estrategia conceptual comun, pero debe traducirse y guardarse por separado en cada `outputs/<corrida>/search/<fuente>/query.txt`;
 - si las queries por fuente divergen de forma sustantiva, la justificacion debe quedar trazada por fuente en `query_history.md`.
@@ -239,6 +273,7 @@ No se recomienda pasar de dos niveles de cribado más una selección final dentr
 - Si el trabajo requiere incorporar Scopus, consulta `guides/scopus-automation.md`.
 - Si el trabajo requiere automatizar búsqueda regional en Redalyc con API key, consulta `guides/redalyc-automation.md`.
 - Si el trabajo requiere avanzar con pausas y autorización entre etapas, consulta `guides/automation-by-phases.md`.
+- Para Zotero, extracción, calidad, síntesis o informe final, consulta `guides/postselection-workflow.md`.
 - Si necesitas decidir qué script usar, consulta `guides/script-inventory.md`.
 
 ## Regla de consulta previa (obligatoria)
@@ -246,6 +281,7 @@ No se recomienda pasar de dos niveles de cribado más una selección final dentr
 Antes de ejecutar **cualquier fase** del flujo automatizado, el agente **DEBE**:
 
 1. Consultar la guía de automatización correspondiente a la fuente activa para identificar el script, los argumentos y los artefactos esperados de esa fase.
+   - guides/fulltext-recovery.md para la Fase 6
    - `guides/openalex-automation.md` para OpenAlex
    - `guides/doaj-automation.md` para DOAJ
    - `guides/semanticscholar-automation.md` para Semantic Scholar
@@ -254,6 +290,7 @@ Antes de ejecutar **cualquier fase** del flujo automatizado, el agente **DEBE**:
    - `guides/scopus-automation.md` para Scopus
    - `guides/redalyc-automation.md` para Redalyc
    - si el caso declara una Fase 3 multi-fuente, consultar también `guides/automation-by-phases.md`
+   - `guides/postselection-workflow.md` para las Fases 8 a 11
    - `guides/script-inventory.md` para no duplicar scripts existentes
 2. Usar el script documentado en la guía. **No improvisar** herramientas alternativas si existe un script diseñado para esa tarea.
 3. Si el script requiere acceso a red u otra capacidad restringida por el sandbox, solicita permisos. Si la ejecución sigue bloqueada o falla por restricciones del entorno, entonces propone el comando exacto al usuario para que lo ejecute en su terminal.

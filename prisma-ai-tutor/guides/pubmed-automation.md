@@ -74,6 +74,11 @@ Con rango de años, el script puede agregar automáticamente:
 AND (2015:2025[pdat])
 ```
 
+`query.txt` conserva siempre la consulta conceptual aprobada. Los filtros
+automáticos (`hasabstract` y rango `[pdat]`) son idempotentes y la consulta
+realmente enviada a PubMed queda separada en `effective_query.txt`. Una
+reejecución no debe reescribir ni anidar filtros dentro de `query.txt`.
+
 ## Script
 
 ```bash
@@ -86,6 +91,7 @@ python3 .codex/skills/prisma-ai-tutor/scripts/pubmed_search.py \
 Dentro de `outputs/<corrida>/`:
 
 - `search/pubmed/query.txt`
+- `search/pubmed/effective_query.txt`
 - `search/pubmed/raw_results.json`
 - `search/pubmed/normalized_results.json`
 - `search/pubmed/normalized_results.csv`

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 import xml.etree.ElementTree as ET
@@ -46,6 +47,7 @@ DEFAULT_RESULTS_THRESHOLD = 500
 
 @dataclass
 class SearchConfig:
+    conceptual_query: str
     query: str
     from_year: str | None
     to_year: str | None
@@ -99,8 +101,8 @@ def parse_args() -> SearchConfig:
     config_file = Path(args.config_file).expanduser().resolve() if args.config_file else None
     env_config = load_env_config(config_file)
     require_abstract = resolve_bool_flag(args.require_abstract, env_config.get("PUBMED_REQUIRE_ABSTRACT"), True)
-    query = resolve_pubmed_query(args.query, args.query_file, env_config, config_file)
-    query = add_year_filters(add_abstract_filter(query, require_abstract), args, env_config)
+    conceptual_query = resolve_pubmed_query(args.query, args.query_file, env_config, config_file)
+    query = add_year_filters(add_abstract_filter(conceptual_query, require_abstract), args, env_config)
     retmax = max(resolve_int(args.retmax, env_config.get("PUBMED_RETMAX"), DEFAULT_RETMAX), 1)
     max_results = max(resolve_int(args.max_results, env_config.get("PUBMED_MAX_RESULTS"), DEFAULT_MAX_RESULTS), 1)
     sampling_threshold = max(
@@ -125,6 +127,7 @@ def parse_args() -> SearchConfig:
         else DEFAULT_METADATA_CONFIG_PATH
     )
     return SearchConfig(
+        conceptual_query=conceptual_query,
         query=query,
         from_year=resolve_str(args.from_year, env_config.get("PUBMED_FROM_YEAR")),
         to_year=resolve_str(args.to_year, env_config.get("PUBMED_TO_YEAR")),
@@ -171,6 +174,8 @@ def add_year_filters(query: str, args: argparse.Namespace, env_config: dict[str,
     from_year = resolve_str(args.from_year, env_config.get("PUBMED_FROM_YEAR"))
     to_year = resolve_str(args.to_year, env_config.get("PUBMED_TO_YEAR"))
     if not from_year and not to_year:
+        return query
+    if re.search(r"\b\d{4}\s*:\s*\d{4}\s*\[pdat\]", query, flags=re.I):
         return query
     start = from_year or "1800"
     end = to_year or "3000"
@@ -384,7 +389,8 @@ def build_search_log_text(
         "",
         f"- Fecha de ejecucion: `{datetime.now(timezone.utc).astimezone().isoformat(timespec='seconds')}`",
         "- Fuente: `PubMed / NCBI E-utilities`",
-        f"- Consulta: `{config.query}`",
+        f"- Consulta conceptual: `{config.conceptual_query}`",
+        f"- Consulta efectiva ejecutada: `{config.query}`",
         f"- Requerir abstract: `{config.require_abstract}`",
         f"- Total reportado por PubMed: `{meta.get('count', 'No reportado')}`",
         f"- Resultados exportados: `{result_count}`",
@@ -425,7 +431,10 @@ def main() -> int:
     screening_dir = screening_output_dir(config.out_dir)
     ensure_dir(search_dir)
     ensure_dir(screening_dir)
-    write_query_file(search_dir / config.query_output_name, config.query)
+    # query.txt is a human-approved input artifact. Never replace it with
+    # runtime filters, otherwise each rerun nests hasabstract/date clauses.
+    write_query_file(search_dir / config.query_output_name, config.conceptual_query)
+    write_query_file(search_dir / "effective_query.txt", config.query)
     try:
         metadata_columns = load_metadata_config(config.metadata_config_file)
         raw_results, meta = fetch_results(config)
@@ -437,7 +446,8 @@ def main() -> int:
     warnings = sampling_warnings(config, meta, len(filtered))
     summary = {
         "source": "PubMed",
-        "query": config.query,
+        "query": config.conceptual_query,
+        "effective_query": config.query,
         "config_file": str(config.config_file) if config.config_file else None,
         "max_results": config.max_results,
         "count": meta.get("count"),

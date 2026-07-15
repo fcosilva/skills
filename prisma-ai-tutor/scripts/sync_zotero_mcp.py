@@ -5,7 +5,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import fcntl
+import hashlib
 import json
+import os
+import tempfile
+from contextlib import contextmanager
 from urllib.error import HTTPError
 from dataclasses import dataclass
 from pathlib import Path
@@ -149,9 +154,48 @@ def build_item_fields(row: dict[str, Any]) -> dict[str, str]:
         "extra": build_extra_field(row),
     }
     journal = normalize_text(row.get("journal"))
-    if journal:
+    item_type = map_item_type(normalize_text(row.get("document_type")))
+    if journal and item_type == "journalArticle":
         fields["publicationTitle"] = journal
+    if item_type == "journalArticle":
+        for source, target in (("volume", "volume"), ("issue", "issue"), ("pages", "pages")):
+            value = normalize_text(row.get(source))
+            if value:
+                fields[target] = value
+    if item_type == "preprint":
+        repository = normalize_text(row.get("repository") or journal)
+        if repository:
+            fields["repository"] = repository
+    if item_type in {"bookSection", "report", "thesis"}:
+        publisher = normalize_text(row.get("publisher"))
+        if publisher:
+            fields["publisher"] = publisher
     return {key: value for key, value in fields.items() if value}
+
+
+@contextmanager
+def exclusive_collection_lock(library: str, collection: str, enabled: bool = True):
+    """Prevent two CLI processes from racing search-before-create for one collection."""
+    if not enabled:
+        yield None
+        return
+    digest = hashlib.sha256(f"{library}\0{collection}".encode()).hexdigest()[:16]
+    lock_path = Path(tempfile.gettempdir()) / f"prisma-zotero-{digest}.lock"
+    with lock_path.open("a+", encoding="utf-8") as handle:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise RuntimeError(
+                f"Another Zotero synchronization is active for {library}/{collection}."
+            ) from exc
+        handle.seek(0)
+        handle.truncate()
+        handle.write(f"pid={os.getpid()}\n")
+        handle.flush()
+        try:
+            yield lock_path
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def build_extra_field(row: dict[str, Any]) -> str:
@@ -451,7 +495,12 @@ def sync(config: SyncConfig) -> dict[str, Any]:
 
 def main() -> int:
     config = parse_args()
-    result = sync(config)
+    with exclusive_collection_lock(
+        config.zotero.library,
+        config.zotero.collection,
+        enabled=not config.dry_run,
+    ):
+        result = sync(config)
 
     config.zotero.out_dir.mkdir(parents=True, exist_ok=True)
     summary_json = config.zotero.out_dir / "zotero_sync_summary.json"

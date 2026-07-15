@@ -15,7 +15,7 @@ Uso recomendado:
 - El agente propone cribados y síntesis, pero el corpus final requiere confirmación humana.
 - `initial` y `focused` se basan principalmente en título, resumen y metadatos.
 - La selección final solo puede incluir estudios con texto completo accesible y legible.
-- La extracción, calidad, síntesis e informe final ocurren solo después del corpus final confirmado.
+- La extracción y calidad comienzan como propuestas adaptadas al caso, requieren validación humana por fila y solo después alimentan síntesis e informe.
 
 ## Fase 1. Delimitación del tema
 
@@ -143,13 +143,17 @@ Secuencia recomendada:
 - verificar accesibilidad sin descarga masiva;
 - actualizar matriz;
 - pedir autorización para descargar;
-- descargar PDF/HTML accesibles;
-- extraer texto plano desde PDF/HTML útiles.
+- recuperar por varias rutas legítimas y registrar cada URL intentada;
+- validar la firma PDF o el cuerpo académico HTML;
+- auditar falsos positivos y falsos negativos del descargador;
+- extraer texto plano verificable y sincronizar la matriz desde los estados `prepared`.
 
 Salida esperada:
 
 - `fulltext/fulltext_access_validation.*`;
 - `fulltext/fulltext_download_log.csv`;
+- `fulltext/fulltext_attempt_log.csv`;
+- `fulltext/fulltext_content_audit.csv`;
 - `fulltext/fulltext_recovery_summary.md`;
 - `fulltext/review_text/`;
 - `fulltext/fulltext_review_text_log.csv`;
@@ -157,7 +161,8 @@ Salida esperada:
 
 Regla clave:
 
-- descargar no equivale a leer; la lectura asistida requiere texto completo legible o HTML/PDF procesable.
+- descargar no equivale a leer; solo la extracción verificable confirma texto legible.
+- no se deben evadir challenges, CAPTCHA ni verificadores humanos.
 
 ## Fase 7. Selección final o evaluación de elegibilidad
 
@@ -204,12 +209,21 @@ Salida esperada:
 Regla clave:
 
 - la fase no cierra solo porque los ítems existan en Zotero; también debe existir la nota mínima de trazabilidad.
+- usar la fuente normalizada fusionada cuando corresponda, rechazar manifiestos bibliográficamente vacíos o duplicados y ejecutar una sola sincronización de escritura por colección.
 
 ## Fase 9. Extracción de evidencia
 
 Objetivo:
 
 - extraer datos verificables desde el texto completo del corpus final.
+
+Secuencia:
+
+- proponer protocolo, unidad de análisis y campos según la pregunta y los diseños;
+- obtener validación humana de la plantilla;
+- generar extracción asistida con localizadores y estado pendiente;
+- obtener correcciones o validación humana de todas las filas;
+- ejecutar el gate antes del cierre y de las notas Zotero.
 
 Debe registrar:
 
@@ -233,12 +247,20 @@ Salida esperada:
 Regla clave:
 
 - si un dato no aparece en el texto revisado, se escribe `No reportado`.
+- una matriz poblada no equivale a fase cerrada; puede tener varias filas por estudio y permanece como propuesta hasta validar cada fila.
 
 ## Fase 10. Evaluación de calidad
 
 Objetivo:
 
 - valorar calidad metodológica básica y riesgos de interpretación.
+
+Secuencia:
+
+- inventariar diseños y proponer criterios o instrumentos pertinentes;
+- validar humanamente el protocolo antes de valorar;
+- generar valoraciones asistidas con evidencia, localizadores y estado pendiente;
+- revisar o corregir humanamente cada fila y ejecutar el gate de cierre.
 
 Criterios mínimos:
 
@@ -257,6 +279,7 @@ Salida esperada:
 Regla clave:
 
 - la calidad no elimina automáticamente estudios; ayuda a interpretar el peso de la evidencia.
+- no confundir adecuación de reporte, riesgo de sesgo y propiedades de medición, ni sumar escalas incompatibles sin justificación aprobada.
 
 ## Fase 11. Síntesis narrativa, auditoría e informe final
 
@@ -274,6 +297,7 @@ Acción:
 - declarar limitaciones del corpus y del proceso;
 - ejecutar auditoría o checklist de cierre;
 - pedir confirmación humana antes de generar `informe_final.md`.
+- generar antes una matriz código interno–Zotero–cita APA–referencia y validar enlaces documentales/localizadores de la narrativa.
 
 Salida esperada:
 
@@ -300,3 +324,4 @@ Contenido mínimo sugerido para `informe_final.md`:
 Regla clave:
 
 - el informe final no reemplaza los artefactos de trazabilidad; los integra en un documento legible para entrega académica.
+- el informe usa APA 7 autor–fecha; los códigos internos quedan en auditorías y no sustituyen citas bibliográficas.

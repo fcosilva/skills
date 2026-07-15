@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 from urllib import error, request
 
+from fulltext_utils import classify_payload
 from openalex_search import WORKSPACE_ROOT_KEY, resolve_workspace_path
 from run_outputs import refresh_run_outputs
 
@@ -78,6 +79,9 @@ def parse_args() -> argparse.Namespace:
             f"Equivalent to {WORKSPACE_ROOT_KEY} for CLI-only scripts."
         ),
     )
+    parser.add_argument("--log", help="Incremental CSV validation log.")
+    parser.add_argument("--resume", action="store_true", help="Reuse completed URL checks from the log.")
+    parser.add_argument("--progress-every", type=int, default=25)
     return parser.parse_args()
 
 
@@ -116,41 +120,57 @@ def build_headers(mailto: str | None) -> dict[str, str]:
 
 
 def is_validated_fulltext_url(url: str, mailto: str | None, timeout: float) -> bool:
+    return validate_fulltext_url(url, mailto, timeout)[0]
+
+
+def validate_fulltext_url(url: str, mailto: str | None, timeout: float) -> tuple[bool, str, str, str]:
     headers = build_headers(mailto)
     req = request.Request(url, headers=headers)
 
     try:
         with request.urlopen(req, timeout=timeout) as response:
-            final_url = response.geturl().lower()
-            content_type = response.headers.get("Content-Type", "").lower()
+            final_url = response.geturl()
+            content_type = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
             if response.status not in (200, 203):
-                return False
+                return False, "", f"http_{response.status}", final_url
+            payload = response.read(2_000_000)
+            status, access_kind, evidence = classify_payload(final_url, content_type, payload)
+            return access_kind in {"pdf_fulltext", "html_fulltext"}, access_kind, f"{status}: {evidence}", final_url
+    except Exception as exc:  # noqa: BLE001
+        return False, "", f"request_error: {exc}", ""
 
-            if "application/pdf" in content_type or final_url.endswith(".pdf"):
-                return True
 
-            known_fulltext_hosts = (
-                "pmc.ncbi.nlm.nih.gov",
-                "arxiv.org",
-                "scielo.",
-                "zenodo.org",
-                "osf.io",
-                "hal.science",
-            )
-            if any(host in final_url for host in known_fulltext_hosts):
-                return True
+def markdown_cell(value: str) -> str:
+    return value.replace("\r", " ").replace("\n", " ").replace("|", r"\|")
 
-            fulltext_markers = (
-                "/pdf",
-                "/article/",
-                "/full",
-                "/fulltext",
-                "/download",
-                "/viewcontent.cgi",
-            )
-            return "text/html" in content_type and any(marker in final_url for marker in fulltext_markers)
-    except Exception:  # noqa: BLE001
-        return False
+
+def write_matrix_pair(csv_path: Path, md_path: Path, fields: list[str], rows: list[dict[str, str]]) -> None:
+    csv_tmp = csv_path.with_name(csv_path.name + ".tmp")
+    md_tmp = md_path.with_name(md_path.name + ".tmp")
+    with csv_tmp.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)
+    with md_tmp.open("w", encoding="utf-8") as handle:
+        handle.write("# Matriz de cribado (seleccion de estudios)\n\n")
+        handle.write("| " + " | ".join(fields) + " |\n")
+        handle.write("|" + "|".join("---" for _ in fields) + "|\n")
+        for row in rows:
+            handle.write("| " + " | ".join(markdown_cell(row.get(field, "")) for field in fields) + " |\n")
+    os.replace(csv_tmp, csv_path)
+    os.replace(md_tmp, md_path)
+
+
+VALIDATION_FIELDS = ["code", "url", "final_url", "remote_fulltext", "access_kind", "message"]
+
+
+def write_validation_log(path: Path, rows: list[dict[str, str]]) -> None:
+    temporary = path.with_name(path.name + ".tmp")
+    with temporary.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=VALIDATION_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+    os.replace(temporary, path)
 
 
 def update_matrix(matrix_path: Path, target_codes: set[str], mailto: str | None, timeout: float) -> int:
@@ -181,10 +201,10 @@ def update_matrix(matrix_path: Path, target_codes: set[str], mailto: str | None,
 
         access_url = parts[access_url_idx]
         if not access_url:
-            parts[fulltext_idx] = "No"
+            parts[fulltext_idx] = "No confirmado"
         else:
             parts[fulltext_idx] = (
-                "Si" if is_validated_fulltext_url(access_url, mailto, timeout) else "No confirmado"
+                "Por verificar" if is_validated_fulltext_url(access_url, mailto, timeout) else "No confirmado"
             )
         changed += 1
         updated.append("| " + " | ".join(parts[1:-1]) + " |")
@@ -198,21 +218,85 @@ def main() -> int:
     env_config = {WORKSPACE_ROOT_KEY: args.workspace_root} if args.workspace_root else None
     matrix_path = resolve_workspace_path(args.matrix, None, env_config)
     decisions_path = resolve_workspace_path(args.decisions, None, env_config)
+    csv_path = matrix_path if matrix_path.suffix.lower() == ".csv" else matrix_path.with_suffix(".csv")
+    md_path = matrix_path if matrix_path.suffix.lower() == ".md" else matrix_path.with_suffix(".md")
+    log_path = (
+        resolve_workspace_path(args.log, None, env_config)
+        if args.log
+        else matrix_path.parent.parent / "fulltext" / "fulltext_access_validation_log.csv"
+    )
 
     if not matrix_path.exists():
         raise SystemExit(f"Matrix not found: {matrix_path}")
     if not decisions_path.exists():
         raise SystemExit(f"Decisions CSV not found: {decisions_path}")
+    if not csv_path.exists():
+        if matrix_path.suffix.lower() == ".md":
+            export_matrix_csv(matrix_path, csv_path)
+        else:
+            raise SystemExit(f"Screening matrix CSV not found: {csv_path}")
 
     mailto = args.mailto or os.getenv("OPENALEX_MAILTO")
     target_codes = load_decision_subset(decisions_path)
-    changed = update_matrix(matrix_path, target_codes, mailto, args.timeout)
-    csv_path = matrix_path.with_suffix(".csv")
-    export_matrix_csv(matrix_path, csv_path)
+    with csv_path.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        fields = reader.fieldnames or []
+        rows = list(reader)
+    if "Codigo" not in fields or "URL de acceso" not in fields or "Texto completo accesible" not in fields:
+        raise SystemExit("Unexpected screening matrix schema.")
+    if any(None in row for row in rows):
+        raise SystemExit("Malformed screening matrix CSV: one or more rows have extra columns.")
+
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    previous: dict[str, dict[str, str]] = {}
+    if args.resume and log_path.exists():
+        with log_path.open(encoding="utf-8-sig", newline="") as handle:
+            previous = {row.get("code", ""): row for row in csv.DictReader(handle)}
+    results: list[dict[str, str]] = []
+    changed = 0
+    targets_seen: set[str] = set()
+    for row in rows:
+        code = row.get("Codigo", "").strip()
+        if code not in target_codes:
+            continue
+        targets_seen.add(code)
+        url = row.get("URL de acceso", "").strip()
+        cached = previous.get(code) if args.resume else None
+        if cached and cached.get("url") == url:
+            result = cached
+            verified = cached.get("remote_fulltext") == "Si"
+        elif not url:
+            verified = False
+            result = {
+                "code": code, "url": "", "final_url": "", "remote_fulltext": "No",
+                "access_kind": "", "message": "missing_access_url",
+            }
+        else:
+            verified, kind, message, final_url = validate_fulltext_url(url, mailto, args.timeout)
+            result = {
+                "code": code, "url": url, "final_url": final_url,
+                "remote_fulltext": "Si" if verified else "No",
+                "access_kind": kind, "message": message,
+            }
+        # Remote validation is only a retrieval lead. Final "Si" is reserved
+        # for locally prepared text with confirmed bibliographic identity.
+        value = "Por verificar" if verified else "No confirmado"
+        if row.get("Texto completo accesible", "") != value:
+            row["Texto completo accesible"] = value
+            changed += 1
+        results.append(result)
+        write_validation_log(log_path, results)
+        if args.progress_every and len(results) % max(args.progress_every, 1) == 0:
+            print(f"Validated {len(results)} / {len(target_codes)} access URLs...", flush=True)
+    missing = sorted(target_codes - targets_seen)
+    if missing:
+        raise SystemExit(f"Decision codes missing from screening matrix: {', '.join(missing[:10])}")
+    write_matrix_pair(csv_path, md_path, fields, rows)
     run_dir = matrix_path.parent.parent if matrix_path.parent.name == "screening" else matrix_path.parent
     refresh_run_outputs(run_dir)
-    print(f"Updated full-text accessibility for {changed} records in: {matrix_path}")
+    print(f"Updated provisional full-text accessibility for {changed} records in: {matrix_path}")
     print(f"Updated screening matrix CSV: {csv_path}")
+    print(f"Validation log: {log_path}")
     return 0
 
 

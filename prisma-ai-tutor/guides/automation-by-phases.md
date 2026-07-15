@@ -428,18 +428,24 @@ Entrada:
 
 Acción:
 
-- primero verificar accesibilidad de texto completo sin descargar masivamente documentos y actualizar la matriz
-- mostrar el resultado de esa validación y pedir autorización antes de iniciar la descarga local
-- después de la autorización, recuperar localmente los archivos fuente cuando sea posible
-- distinguir entre `pdf_fulltext`, `html_fulltext`, `landing_metadata_only` y `blocked_or_error`
-- preparar texto legible para revisión asistida a partir de los `pdf_fulltext` y `html_fulltext`
-- registrar qué estudios tienen `texto completo` realmente útil para lectura y cuáles deben excluirse por falta de texto completo
+- consultar `guides/fulltext-recovery.md`
+- primero verificar accesibilidad inspeccionando contenido y actualizar la matriz de forma preliminar
+- mostrar el resultado y pedir autorización antes de iniciar la descarga local
+- recuperar por URL registrada, descubrimiento OA por DOI, repositorios permitidos y enlaces declarados por la landing
+- guardar cada ruta probada en `fulltext_attempt_log.csv`
+- distinguir por contenido entre `pdf_fulltext`, `html_fulltext`, `landing_metadata_only` y `blocked_or_error`
+- ejecutar `audit_fulltext_recovery.py --apply` antes de preparar texto
+- preparar texto legible y sincronizar la matriz con `prepare_fulltext_review_text.py --matrix ...`
+- registrar qué estudios tienen texto útil y cuáles siguen como `No confirmado`
+- no evadir CAPTCHA, Cloudflare ni verificadores humanos
 
 Salida:
 
 - matriz con estado de accesibilidad actualizado
 - carpeta `outputs/<corrida>/fulltext/` con archivos fuente recuperados
 - log de recuperacion y resumen de accesibilidad
+- log detallado de intentos por URL
+- auditoría de contenido recuperado
 - directorio derivado `outputs/<corrida>/fulltext/review_text/`
 - log y resumen de preparacion de texto para revision
 
@@ -487,6 +493,8 @@ Acción:
 
 - actualizar `case.env` con `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX` de la corrida final vigente
 - preparar el paquete de importación para Zotero
+- comprobar que usa `merged_normalized_results.json` en corridas multifuente y que la metadata enriquecida no está vacía
+- ejecutar primero la sincronización en `--dry-run` y revisar duplicados por DOI/título
 - sincronizar los ítems bibliográficos con la colección objetivo
 - copiar PDFs locales cuando existan y el flujo lo permita
 - crear una nota hija mínima de trazabilidad del cribado final por estudio
@@ -501,9 +509,10 @@ Secuencia obligatoria de Fase 8:
 
 1. actualizar `case.env` con las rutas vigentes de `ZOTERO_SCREENING_DECISIONS` y `ZOTERO_SCREENING_MATRIX`
 2. ejecutar `scripts/prepare_zotero_import.py`
-3. ejecutar `scripts/sync_zotero_mcp.py`
-4. ejecutar `scripts/write_zotero_notes.py --phase screening`
-5. verificar que existan artefactos de sincronización y de notas antes de declarar la fase como cerrada
+3. ejecutar `scripts/sync_zotero_mcp.py --dry-run` y revisar el resultado
+4. ejecutar una sola instancia de `scripts/sync_zotero_mcp.py`
+5. ejecutar `scripts/write_zotero_notes.py --phase screening`
+6. verificar que existan artefactos de sincronización y de notas antes de declarar la fase como cerrada
 
 Regla de cierre:
 
@@ -550,13 +559,17 @@ Entrada:
 
 Acción:
 
-- extraer evidencia verificable
-- completar la matriz de extraccion
-- agregar una nota hija nueva por estudio para la fase de extraccion
+- proponer protocolo, unidad de fila y campos específicos de la pregunta
+- esperar validación humana de la plantilla antes de extraer
+- preparar una extracción asistida con evidencia, localizadores y estado pendiente
+- obtener revisión/corrección humana de todas las filas
+- ejecutar `validate_human_review_gate.py --phase extraction`
+- agregar notas Zotero solo después de un gate positivo
 
 Salida:
 
 - `extraction/extraction_matrix.md`
+- `extraction/phase_extraction_human_review_gate.json`
 - observaciones de extraccion por estudio
 
 Pausa:
@@ -572,13 +585,17 @@ Entrada:
 
 Acción:
 
-- evaluar la calidad metodologica basica de los estudios incluidos
-- documentar limitaciones y riesgos de interpretacion
-- agregar una nota hija nueva por estudio para la fase de calidad
+- inventariar diseños y proponer criterios/instrumentos pertinentes
+- esperar validación humana del protocolo antes de valorar
+- preparar valoraciones asistidas con evidencia y estado pendiente
+- obtener revisión/corrección humana de todas las filas
+- ejecutar `validate_human_review_gate.py --phase quality`
+- agregar notas Zotero solo después de un gate positivo
 
 Salida:
 
 - matriz o resumen de calidad
+- `quality/phase_quality_human_review_gate.json`
 
 Pausa:
 
@@ -594,6 +611,10 @@ Entrada:
 Acción:
 
 - redactar la sintesis narrativa
+- usar únicamente extracción y calidad con validación humana completa
+- distinguir denominadores por estudio, instancia y mecanismo
+- validar enlaces `M` a PDF/HTML y `L` a texto derivado
+- preparar y revisar la matriz código–Zotero–APA antes del informe
 - declarar limites del corpus y del proceso
 - revisar trazabilidad final
 - pedir confirmacion humana antes de generar el informe final integrado

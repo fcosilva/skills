@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,7 @@ from typing import Any
 from openalex_search import load_env_config, resolve_workspace_path
 from run_outputs import refresh_run_outputs
 from zotero_mcp_client import ZoteroMCPClient
+from validate_human_review_gate import CODE_CANDIDATES, evaluate_gate
 
 
 DEFAULT_MCP_URL = "http://127.0.0.1:23120/mcp"
@@ -44,6 +46,7 @@ class NotesConfig:
     screening_matrix: Path
     screening_decisions: Path
     extraction_matrix: Path
+    quality_matrix: Path
     sync_actions: Path
     out_dir: Path
     dry_run: bool
@@ -84,6 +87,11 @@ def parse_args() -> NotesConfig:
         help="Path to extraction_matrix.md. Default: outputs/<run>/extraction/extraction_matrix.md.",
     )
     parser.add_argument(
+        "--quality-matrix",
+        default=None,
+        help="Path to quality_matrix.md/CSV. Default: outputs/<run>/quality/quality_matrix.md.",
+    )
+    parser.add_argument(
         "--sync-actions",
         default=None,
         help="Path to zotero_sync_actions.csv. Default: outputs/<run>/zotero/zotero_sync_actions.csv.",
@@ -119,6 +127,11 @@ def parse_args() -> NotesConfig:
         if args.extraction_matrix
         else run_dir / "extraction" / "extraction_matrix.md"
     )
+    quality_matrix = (
+        resolve_workspace_path(args.quality_matrix, config_file, env_config)
+        if args.quality_matrix
+        else run_dir / "quality" / "quality_matrix.md"
+    )
     sync_actions = (
         resolve_workspace_path(args.sync_actions, config_file, env_config)
         if args.sync_actions
@@ -138,6 +151,7 @@ def parse_args() -> NotesConfig:
         screening_matrix=screening_matrix,
         screening_decisions=screening_decisions,
         extraction_matrix=extraction_matrix,
+        quality_matrix=quality_matrix,
         sync_actions=sync_actions,
         out_dir=out_dir,
         dry_run=args.dry_run,
@@ -150,6 +164,9 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
 
 
 def parse_markdown_table(path: Path) -> list[dict[str, str]]:
+    csv_path = path if path.suffix.casefold() == ".csv" else path.with_suffix(".csv")
+    if csv_path.exists():
+        return read_csv_rows(csv_path)
     if not path.exists():
         return []
     lines = [line.rstrip("\n") for line in path.read_text(encoding="utf-8").splitlines()]
@@ -157,14 +174,41 @@ def parse_markdown_table(path: Path) -> list[dict[str, str]]:
     if len(table_lines) < 2:
         return []
 
-    headers = [cell.strip() for cell in table_lines[0].strip("|").split("|")]
+    splitter = re.compile(r"(?<!\\)\|")
+    def cells(line: str) -> list[str]:
+        return [cell.strip().replace(r"\|", "|") for cell in splitter.split(line[1:-1])]
+    headers = cells(table_lines[0])
     rows: list[dict[str, str]] = []
     for line in table_lines[2:]:
-        values = [cell.strip() for cell in line.strip("|").split("|")]
+        values = cells(line)
         if len(values) != len(headers):
-            continue
+            raise ValueError(f"Malformed Markdown table row in {path}: {line[:100]}")
         rows.append(dict(zip(headers, values)))
     return rows
+
+
+def group_rows_by_study(rows: list[dict[str, str]]) -> dict[str, dict[str, str]]:
+    if not rows:
+        return {}
+    code_field = next((field for field in CODE_CANDIDATES if field in rows[0]), None)
+    if not code_field:
+        raise ValueError(f"No study code column found. Candidates: {', '.join(CODE_CANDIDATES)}")
+    grouped: dict[str, list[dict[str, str]]] = {}
+    for row in rows:
+        code = row.get(code_field, "").strip()
+        if code:
+            grouped.setdefault(code, []).append(row)
+    output: dict[str, dict[str, str]] = {}
+    for code, study_rows in grouped.items():
+        aggregate: dict[str, str] = {"Codigo": code}
+        for index, row in enumerate(study_rows, start=1):
+            prefix = f"Instancia {index} · " if len(study_rows) > 1 else ""
+            for key, value in row.items():
+                if key == code_field or not str(value).strip():
+                    continue
+                aggregate[f"{prefix}{key}"] = str(value).strip()
+        output[code] = aggregate
+    return output
 
 
 def build_screening_note_content(
@@ -304,12 +348,20 @@ def note_tags_for_phase(phase: str) -> list[str]:
 def sync_notes(config: NotesConfig) -> dict[str, Any]:
     matrix_rows = read_csv_rows(config.screening_matrix)
     decisions_rows = read_csv_rows(config.screening_decisions)
-    extraction_rows = parse_markdown_table(config.extraction_matrix)
+    evidence_matrix = config.extraction_matrix if config.phase == "extraction" else config.quality_matrix
+    evidence_rows = parse_markdown_table(evidence_matrix) if config.phase != "screening" else []
+    if config.phase != "screening":
+        gate = evaluate_gate(evidence_matrix, config.phase)
+        if not gate["human_validation_complete"]:
+            raise ValueError(
+                f"Cannot write {config.phase} notes: human validation is pending for "
+                f"{len(gate['pending_rows'])} rows."
+            )
     action_rows = read_csv_rows(config.sync_actions)
 
     matrix_by_code = {row.get("Codigo", "").strip(): row for row in matrix_rows}
     decisions_by_code = {row.get("code", "").strip(): row for row in decisions_rows}
-    extraction_by_code = {row.get("Codigo", "").strip(): row for row in extraction_rows}
+    extraction_by_code = group_rows_by_study(evidence_rows)
 
     client = ZoteroMCPClient(config.mcp_url)
     client.initialize()

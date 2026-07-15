@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -45,18 +46,24 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
 
 
 def parse_markdown_table(path: Path) -> list[dict[str, str]]:
+    csv_path = path if path.suffix.casefold() == ".csv" else path.with_suffix(".csv")
+    if csv_path.exists():
+        return read_csv_rows(csv_path)
     if not path.exists():
         return []
     lines = [line.rstrip("\n") for line in path.read_text(encoding="utf-8").splitlines()]
     table_lines = [line for line in lines if line.startswith("|")]
     if len(table_lines) < 3:
         return []
-    headers = [cell.strip() for cell in table_lines[0].strip("|").split("|")]
+    splitter = re.compile(r"(?<!\\)\|")
+    def cells(line: str) -> list[str]:
+        return [cell.strip().replace(r"\|", "|") for cell in splitter.split(line[1:-1])]
+    headers = cells(table_lines[0])
     rows: list[dict[str, str]] = []
     for line in table_lines[2:]:
-        values = [cell.strip() for cell in line.strip("|").split("|")]
+        values = cells(line)
         if len(values) != len(headers):
-            continue
+            raise ValueError(f"Malformed Markdown table row in {path}: {line[:100]}")
         rows.append(dict(zip(headers, values)))
     return rows
 
@@ -98,11 +105,11 @@ def is_zotero_screening_notes_complete(run_dir: Path) -> bool:
     for notes_summary_path in summary_candidates:
         notes_summary = read_json(notes_summary_path) or {}
         actions = notes_summary.get("actions")
-        if isinstance(actions, list) and any(action.get("phase") in ("screening", "extraction", "quality") for action in actions):
+        if isinstance(actions, list) and any(action.get("phase") == "screening" for action in actions):
             return True
     for notes_actions_path in actions_candidates:
         rows = read_csv_rows(notes_actions_path)
-        if any(row.get("phase", "").strip() in ("screening", "extraction", "quality") for row in rows):
+        if any(row.get("phase", "").strip() == "screening" for row in rows):
             return True
     return False
 
@@ -129,15 +136,66 @@ def final_evaluated_rows(final_rows: list[dict[str, str]]) -> list[dict[str, str
     ]
 
 
-def confirmed_final_selection(case_md: Path | None) -> str:
-    if not case_md or not case_md.exists():
-        return "no consta automáticamente"
-    text = case_md.read_text(encoding="utf-8", errors="ignore").casefold()
+def confirmed_final_selection(case_md: Path | None, run_dir: Path | None = None) -> str:
+    paths = [case_md] if case_md else []
+    if run_dir:
+        paths.extend([
+            run_dir / "fulltext" / "phase7_completion.md",
+            run_dir / "screening" / "phase7_completion.md",
+            run_dir / "screening" / "screening_summary_final.md",
+        ])
+    text = "\n".join(
+        path.read_text(encoding="utf-8", errors="ignore")
+        for path in paths if path and path.exists()
+    ).casefold()
     if "confirmacion humana del corpus final: confirmada" in text:
         return "confirmada"
     if "confirmación humana del corpus final: confirmada" in text:
         return "confirmada"
+    if "selección final confirmada humanamente" in text:
+        return "confirmada"
+    if "confirmó explícitamente" in text and "selección final" in text:
+        return "confirmada"
+    if "elegibilidad final: cerrada y confirmada humanamente" in text:
+        return "confirmada"
     return "no consta automáticamente"
+
+
+def human_gate_status(run_dir: Path, phase: str, matrix: Path) -> str:
+    if not has_meaningful_file(matrix):
+        return "pendiente"
+    report = matrix.parent / f"phase_{phase}_human_review_gate.json"
+    payload = read_json(report) or {}
+    if payload.get("human_validation_complete") is True:
+        return "cerrada"
+    phase_number = "9" if phase == "extraction" else "10"
+    completion = matrix.parent / f"phase{phase_number}_completion.md"
+    if completion.exists():
+        text = completion.read_text(encoding="utf-8", errors="ignore").casefold()
+        if "validó explícitamente" in text or "validada humanamente" in text:
+            return "cerrada"
+    return "propuesta pendiente de validación humana"
+
+
+def synthesis_phase_status(run_dir: Path, synthesis: Path, audit: Path) -> str:
+    if not (has_meaningful_file(synthesis) or has_meaningful_file(audit)):
+        return "pendiente"
+    completion = synthesis.parent / "phase11_completion.md"
+    if completion.exists():
+        text = completion.read_text(encoding="utf-8", errors="ignore").casefold()
+        if "valid" in text and ("cerr" in text or "confirm" in text):
+            return "cerrada"
+    return "propuesta pendiente de validación humana"
+
+
+def count_no_fulltext_exclusions(rows: list[dict[str, str]]) -> int:
+    return sum(
+        1 for row in final_evaluated_rows(rows)
+        if row.get("criterion", "").strip().casefold() in {
+            "fx0", "sin texto completo util para seleccion final", "sin texto completo útil para selección final"
+        }
+        or row.get("final_basis", "").strip().casefold() == "sin texto completo accesible"
+    )
 
 
 def final_fulltext_warnings(run_dir: Path, final_rows: list[dict[str, str]]) -> list[str]:
@@ -264,24 +322,23 @@ def determine_phase_statuses(run_dir: Path) -> dict[str, str]:
         "Fase 8. Zotero": (
             "cerrada" if zotero_sync.exists() and is_zotero_screening_notes_complete(run_dir) else "pendiente"
         ),
-        "Fase 9. Extracción": "cerrada" if has_meaningful_file(extraction_matrix) else "pendiente",
-        "Fase 10. Calidad": "cerrada" if has_meaningful_file(quality_matrix) else "pendiente",
-        "Fase 11. Síntesis y auditoría": (
-            "cerrada" if has_meaningful_file(synthesis) or has_meaningful_file(audit) else "pendiente"
-        ),
+        "Fase 9. Extracción": human_gate_status(run_dir, "extraction", extraction_matrix),
+        "Fase 10. Calidad": human_gate_status(run_dir, "quality", quality_matrix),
+        "Fase 11. Síntesis y auditoría": synthesis_phase_status(run_dir, synthesis, audit),
     }
 
 
 def determine_state(run_dir: Path) -> str:
     next_phase = determine_next_phase(run_dir)
+    status = determine_phase_statuses(run_dir).get(next_phase, "")
     if next_phase == "Corrida cerrada":
         return "cerrado"
     if next_phase == "Fase 11. Síntesis y auditoría":
-        return "en síntesis"
+        return "síntesis pendiente"
     if next_phase == "Fase 10. Calidad":
-        return "en calidad"
+        return "calidad propuesta; validación humana pendiente" if "propuesta" in status else "calidad pendiente"
     if next_phase == "Fase 9. Extracción":
-        return "en extracción"
+        return "extracción propuesta; validación humana pendiente" if "propuesta" in status else "extracción pendiente"
     if next_phase == "Fase 8. Zotero":
         return "en Zotero"
     if next_phase == "Fase 7. Selección final / elegibilidad":
@@ -503,9 +560,9 @@ def build_run_overview(run_dir: Path) -> str:
             f"- Resultados exportados para cribado: `{exported_result_count(search_summary)}`",
             f"- Incluidos en `initial`: `{count_decision(initial_rows, 'Incluir')}`",
             f"- Incluidos en `focused`: `{count_decision(focused_rows_evaluated, 'Incluir')}`",
-            f"- Selección final confirmada: `{confirmed_final_selection(case_md)}`",
+            f"- Selección final confirmada: `{confirmed_final_selection(case_md, run_dir)}`",
             f"- Estudios con `Texto completo`: `{final_basis_counter.get('Texto completo', 0)}`",
-            f"- Estudios excluidos por falta de `Texto completo`: `{final_criterion_counter.get('Sin texto completo util para seleccion final', 0)}`",
+            f"- Estudios excluidos por falta de `Texto completo`: `{count_no_fulltext_exclusions(final_rows)}`",
             "",
             "## Alertas de consistencia",
             "",
@@ -591,7 +648,7 @@ def build_screening_trace(run_dir: Path) -> str:
         f"- Subconjunto evaluado en selección final: `{len(final_rows_evaluated)}`",
         f"- Registros preservados como exclusión previa: `{inherited_final_excluded}`",
         f"- Estudios evaluados con base `Texto completo`: `{final_basis_counter.get('Texto completo', 0)}`",
-        f"- Estudios excluidos por falta de `Texto completo`: `{final_criterion_counter.get('Sin texto completo util para seleccion final', 0)}`",
+        f"- Estudios excluidos por falta de `Texto completo`: `{count_no_fulltext_exclusions(final_rows)}`",
         f"- Estudios incluidos en corpus final: `{count_decision(final_rows, 'Incluir')}`",
         f"- Dudosos remanentes: `{count_decision(final_rows, 'Dudoso')}`",
         f"- Estudios excluidos en selección final: `{count_decision(final_rows, 'Excluir')}`",
@@ -605,22 +662,38 @@ def build_extraction_summary(run_dir: Path) -> str | None:
     rows = parse_markdown_table(matrix)
     if not rows:
         return None
+    code_field = next((field for field in ("Codigo", "Código", "Codigo estudio", "Código estudio") if field in rows[0]), None)
+    review_candidates = (
+        "Estado de revisión humana", "Estado de revision humana", "Revisión humana", "Revision humana",
+        "Estado de revisión", "Estado de revision",
+    )
+    review_field = next((field for field in review_candidates if field in rows[0]), None)
     completed = 0
+    administrative_fields = {
+        "Codigo", "Código", "Codigo estudio", "Código estudio", "Autor/ano", "Pais",
+        "Primera afiliacion", "Titulo", "Estado de revisión humana", "Estado de revision humana",
+        "Revisión humana", "Revision humana", "Estado de revisión", "Estado de revision",
+        "Observación humana", "Observacion humana",
+    }
     for row in rows:
         payload = [
             value.strip()
             for key, value in row.items()
-            if key not in {"Codigo", "Código", "Autor/ano", "Pais", "Primera afiliacion", "Titulo"}
+            if key not in administrative_fields
         ]
         if any(payload):
             completed += 1
+    unique_studies = len({row.get(code_field, "").strip() for row in rows if code_field and row.get(code_field, "").strip()})
+    review_counter = Counter(row.get(review_field, "").strip() or "No reportado" for row in rows) if review_field else Counter()
     lines = [
         "# Resumen de extracción de evidencia",
         "",
         f"- Matriz principal: `{matrix}`",
-        f"- Estudios registrados: `{len(rows)}`",
-        f"- Estudios con extracción no vacía: `{completed}`",
-        f"- Estudios pendientes o mínimos: `{max(len(rows) - completed, 0)}`",
+        f"- Filas o instancias registradas: `{len(rows)}`",
+        f"- Estudios únicos registrados: `{unique_studies or len(rows)}`",
+        f"- Filas con extracción no vacía: `{completed}`",
+        f"- Filas pendientes o mínimas: `{max(len(rows) - completed, 0)}`",
+        f"- Validación humana: `{dict(review_counter) if review_counter else 'No reportado'}`",
         "",
     ]
     return "\n".join(lines) + "\n"
@@ -631,15 +704,27 @@ def build_quality_summary(run_dir: Path) -> str | None:
     rows = parse_markdown_table(matrix)
     if not rows:
         return None
-    counter = Counter(row.get("Calidad", "").strip() for row in rows)
+    category_field = next(
+        (field for field in ("Calidad", "Adecuacion de reporte", "Adecuación de reporte", "Adecuación global dentro del diseño") if field in rows[0]),
+        None,
+    )
+    counter = Counter(row.get(category_field, "").strip() or "No reportado" for row in rows) if category_field else Counter()
+    code_field = next((field for field in ("Codigo", "Código", "Codigo estudio", "Código estudio") if field in rows[0]), None)
+    unique_studies = len({row.get(code_field, "").strip() for row in rows if code_field and row.get(code_field, "").strip()})
+    review_field = next(
+        (field for field in ("Estado de revisión humana", "Estado de revision humana", "Revisión humana", "Revision humana", "Estado de revisión", "Estado de revision") if field in rows[0]),
+        None,
+    )
+    review_counter = Counter(row.get(review_field, "").strip() or "No reportado" for row in rows) if review_field else Counter()
     lines = [
         "# Resumen de calidad metodológica",
         "",
         f"- Matriz principal: `{matrix}`",
-        f"- Estudios evaluados: `{len(rows)}`",
-        f"- Alta: `{counter.get('Alta', 0)}`",
-        f"- Media: `{counter.get('Media', 0)}`",
-        f"- Baja: `{counter.get('Baja', 0)}`",
+        f"- Filas evaluadas: `{len(rows)}`",
+        f"- Estudios únicos evaluados: `{unique_studies or len(rows)}`",
+        f"- Campo de síntesis: `{category_field or 'No reportado'}`",
+        f"- Categorías observadas: `{dict(counter) if counter else 'No reportado'}`",
+        f"- Validación humana: `{dict(review_counter) if review_counter else 'No reportado'}`",
         "",
     ]
     return "\n".join(lines) + "\n"

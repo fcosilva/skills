@@ -210,16 +210,19 @@ Este script:
 - por defecto intenta recuperar registros `Incluir` y `Dudoso` del subconjunto priorizado;
 - puede mostrar progreso periódico cada `n` registros con `PRISMA_PROGRESS_DOWNLOAD_EVERY` o `--progress-every`;
 - permite filtrar decisiones concretas con `--decision` cuando se necesita un subconjunto mas estricto;
-- omite por defecto estudios que no figuran como `Acceso abierto = Si`;
-- intenta descargar el recurso localmente;
+- intenta descubrir copias abiertas por DOI aunque la metadata inicial no marque el registro como OA;
+- consulta OpenAlex, Unpaywall cuando hay correo de contacto y Europe PMC;
+- prueba la URL registrada y sigue enlaces PDF declarados por la propia página;
+- permite reanudar archivos ya verificados con `--resume`;
 - puede reutilizar una sesión del navegador con `--cookies-file`;
 - diferencia entre:
   - `downloaded_pdf`
   - `downloaded_fulltext_html`
   - `downloaded_landing_page`
   - `downloaded_blocked_page`
-  - omisiones como `skipped_non_oa`
+  - errores por URL y rutas agotadas
 - guarda un log detallado y un resumen de la subfase.
+- guarda además `fulltext_attempt_log.csv` con cada URL y ruta probada.
 
 Ejemplo:
 
@@ -230,7 +233,8 @@ python3 skills/prisma-ai-tutor/scripts/download_fulltext.py \
   --output-dir outputs/<corrida>/fulltext \
   --log outputs/<corrida>/fulltext/fulltext_download_log.csv \
   --summary outputs/<corrida>/fulltext/fulltext_recovery_summary.md \
-  --config-file cases/ia-generativa-programacion/case.env
+  --config-file cases/ia-generativa-programacion/case.env \
+  --resume
 ```
 
 Ejemplo con cookies exportadas del navegador:
@@ -250,11 +254,12 @@ Artefactos esperados:
 
 - carpeta local de documentos fuente, por ejemplo `outputs/<corrida>/fulltext/`
 - `outputs/<corrida>/fulltext/fulltext_download_log.csv`
+- `outputs/<corrida>/fulltext/fulltext_attempt_log.csv`
 - `outputs/<corrida>/fulltext/fulltext_recovery_summary.md`
 
 Clasificación operativa recomendada:
 
-- `pdf_fulltext`: PDF útil para revisión
+- `pdf_fulltext`: contenido con firma PDF real
 - `html_fulltext`: HTML que contiene el artículo legible
 - `landing_metadata_only`: landing con metadata o navegación, pero sin artículo útil para lectura final
 - `blocked_or_error`: página de bloqueo, login, challenge o error
@@ -263,6 +268,7 @@ Nota importante:
 
 - descargar un PDF o un HTML no significa que el agente ya esté leyendo el texto;
 - para el cribado `final`, conviene preparar texto legible a partir de esos artefactos recuperados.
+- antes de preparar, ejecutar `audit_fulltext_recovery.py --apply` para corregir clasificaciones por contenido.
 
 ## Preparación de texto para revisión asistida
 
@@ -278,7 +284,8 @@ Ejemplo:
 python3 skills/prisma-ai-tutor/scripts/prepare_fulltext_review_text.py \
   --input-dir outputs/<corrida>/fulltext \
   --output-dir outputs/<corrida>/fulltext/review_text \
-  --download-log outputs/<corrida>/fulltext/fulltext_download_log.csv
+  --download-log outputs/<corrida>/fulltext/fulltext_download_log.csv \
+  --matrix outputs/<corrida>/screening/screening_matrix.csv
 ```
 
 Artefactos esperados:
@@ -292,7 +299,8 @@ Recomendación metodológica:
 - no confundir una `landing_metadata_only` con un `full text` útil;
 - el `final` del apoyo automatizado debería usar primero los textos preparados desde `pdf_fulltext` o `html_fulltext`;
 - cuando no se pueda recuperar el documento, el estudio no debe entrar al corpus final.
-- para sitios con challenge como Cloudflare, la recuperación automática puede requerir cookies exportadas de una sesión del navegador que ya haya pasado el desafío.
+- no intentar evadir challenges como Cloudflare; usar cookies solo de una sesión autorizada en la que una persona ya completó el control y los términos permiten su reutilización.
+- si persiste el bloqueo, usar repositorios abiertos, acceso institucional, incorporación manual o solicitud al autor.
 
 Además genera un resumen rápido de calidad del conjunto con datos como:
 

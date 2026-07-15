@@ -39,6 +39,15 @@ La IA puede apoyar, pero el estudiante debe:
 - Interpretar hallazgos.
 - Redactar conclusiones finales.
 
+### Gates de extracción y calidad
+
+- La IA propone la plantilla de extracción según la pregunta y la unidad de análisis; el humano la valida antes de usarla.
+- La IA propone criterios de calidad según los diseños; el humano valida el protocolo antes de valorar.
+- Cada fila asistida conserva evidencia, localizador y estado de revisión.
+- Una matriz existente o completamente poblada no equivale a una fase cerrada.
+- No usar extracción o calidad en síntesis, informe o notas Zotero mientras existan filas pendientes.
+- Registrar el cierre con `phase_extraction_human_review_gate.json` o `phase_quality_human_review_gate.json`, o con un acta equivalente explícita.
+
 ### Selección justificada
 
 Ningún documento debe incluirse o excluirse sin:
@@ -86,3 +95,6 @@ Verifica:
 10. ¿Las conclusiones son proporcionales a la evidencia?
 11. ¿El informe se mantiene entre 5000 y 6000 palabras?
 12. ¿El número de referencias totales es razonable, verificable y coherente con los estudios incluidos?
+13. ¿La extracción fue propuesta según el caso y validada humanamente por completo?
+14. ¿La evaluación de calidad fue adaptada a los diseños y validada humanamente por completo?
+15. ¿El informe usa citas APA y reserva los códigos internos para trazabilidad?
